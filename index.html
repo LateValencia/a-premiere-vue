@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>À première vue</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="À première vue">
+<meta name="theme-color" content="#f6f7f9">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* Charte reprise de « Clé de lecture » : papier, encre, feutre rouge, une colonne étroite comme un pupitre */
+:root{
+  --paper:#f6f7f9; --card:#ffffff; --ink:#1b2130; --ink-soft:#5b6476; --line:#d9dde5;
+  --felt:#a8323a; --felt-soft:#f6e3e4; --ok:#2e7d4f; --ok-soft:#e1f2e8; --warn:#9a6a12; --warn-soft:#f8eed9;
+  --key-white:#fdfdfb; --key-black:#1d2029; --key-edge:#c9ced8;
+  --f-display:"Young Serif",Georgia,"Times New Roman",serif;
+  --f-body:"Figtree",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#12141a; --card:#1b1e26; --ink:#eceef3; --ink-soft:#9aa2b3; --line:#2e3340;
+  --felt:#e0646c; --felt-soft:#3a1f23; --ok:#5cc489; --ok-soft:#173326; --warn:#e2b45a; --warn-soft:#352a14;
+  --key-white:#e9e9e4; --key-black:#0b0c10; --key-edge:#3a3f4c; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --paper:#12141a; --card:#1b1e26; --ink:#eceef3; --ink-soft:#9aa2b3; --line:#2e3340;
+  --felt:#e0646c; --felt-soft:#3a1f23; --ok:#5cc489; --ok-soft:#173326; --warn:#e2b45a; --warn-soft:#352a14;
+  --key-white:#e9e9e4; --key-black:#0b0c10; --key-edge:#3a3f4c; color-scheme:dark }
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--paper);margin:0}
+body{color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;touch-action:manipulation;
+  padding-top:max(12px,env(safe-area-inset-top,0px));padding-bottom:max(24px,env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+h1{font-family:var(--f-display);font-weight:400;font-size:24px;margin:0;letter-spacing:.2px;line-height:1.2}
+.felt{height:3px;background:var(--felt);border-radius:2px;width:48px;margin-top:4px}
+.status{font-size:12px;color:var(--ink-soft);text-align:right}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 9px}
+.stat span{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat b{font-weight:600;font-size:19px;font-variant-numeric:tabular-nums}
+.stat b.low{color:var(--felt)}
+.meter{height:4px;background:var(--line);border-radius:2px;overflow:hidden}
+.meter i{display:block;height:100%;width:0;background:var(--felt);transition:width .15s}
+.staff{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:6px 4px 2px}
+.staff svg{display:block;width:100%;height:auto}
+.staff svg.next{opacity:.5;border-top:1px dashed var(--line)}
+.feedback{min-height:24px;text-align:center;font-weight:500;font-size:14.5px;padding:2px 8px 8px}
+.feedback.ok{color:var(--ok)} .feedback.ko{color:var(--felt)} .feedback.idle{color:var(--ink-soft)}
+/* Clavier : une octave par rangée (l'aigu en haut), touches larges comme dans Clé de lecture */
+.kb{display:flex;flex-direction:column;gap:6px;user-select:none;-webkit-user-select:none}
+.oct{position:relative;display:flex;gap:3px}
+.kb button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;padding:0}
+.w{flex:1;background:var(--key-white);border:1px solid var(--key-edge);border-radius:0 0 8px 8px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:6px!important;color:#5b6476;font-size:12.5px;line-height:1.1;position:relative}
+.w.mid::before{content:"";position:absolute;bottom:40px;width:7px;height:7px;border-radius:50%;background:var(--felt);opacity:.55}
+.w .o{font-size:10px;opacity:.75}
+.dense .w{border-radius:0 0 5px 5px;font-size:11px;padding-bottom:4px!important}
+.dense .w.mid::before{bottom:30px;width:6px;height:6px}
+.stat b{font-size:18px}
+.b{position:absolute;top:0;width:9.5%;height:58%;background:var(--key-black);border:0;border-radius:0 0 5px 5px}
+.w.hit-ok{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.w.hit-ko,.b.hit-ko{background:var(--felt-soft);border:1px solid var(--felt)}
+.w:active{transform:translateY(1px)}
+.kbbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--ink-soft)}
+.kbbar .tgs{display:flex;gap:14px}
+section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+h2{font-family:var(--f-display);font-weight:400;font-size:17px;margin:0}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{font:inherit;font-size:13px;border:0;background:transparent;color:var(--ink);padding:6px 12px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.levels{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.levels button{font:inherit;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:9px;padding:6px 2px 5px;cursor:pointer;display:flex;flex-direction:column;align-items:center;line-height:1.15;position:relative}
+.levels b{font-size:17px;font-weight:600}
+.levels small{font-size:10px;color:var(--ink-soft);white-space:nowrap}
+.levels button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.levels button[aria-pressed="true"] small{color:var(--paper);opacity:.8}
+.levels button:disabled{opacity:.38;cursor:default}
+.levels button.here::after{content:"";position:absolute;top:5px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--felt)}
+.lvinfo{font-size:13.5px;margin:0}
+.lvinfo b{font-weight:600}
+.go{font:inherit;font-weight:600;font-size:16px;border:0;background:var(--felt);color:#fff;padding:12px;border-radius:11px;cursor:pointer}
+.go.alt{background:var(--ink);color:var(--paper)}
+label.tg{display:flex;align-items:center;gap:6px;cursor:pointer}
+label.tg input{width:16px;height:16px;accent-color:var(--felt);margin:0}
+.muted{color:var(--ink-soft);font-size:13px;margin:0}
+.btn{font:inherit;font-size:13px;border:1px solid var(--line);background:transparent;color:var(--ink);padding:6px 12px;border-radius:8px;cursor:pointer}
+.btn.danger{color:var(--felt);border-color:var(--felt)}
+.result .big{font-family:var(--f-display);font-size:30px;line-height:1.1}
+.stars{color:var(--warn);font-size:24px;letter-spacing:2px}
+.okt{color:var(--ok);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12.5px;padding:4px 9px;border-radius:7px;background:var(--paper);color:var(--ink-soft)}
+.chip.on{background:var(--ok-soft);color:var(--ok)}
+.hist{display:flex;flex-direction:column;gap:6px}
+.hist div{border-radius:8px;background:var(--paper);padding:7px 10px;font-size:13px}
+.hist .t{display:flex;justify-content:space-between;gap:8px;font-weight:600}
+.hist .t em{font-style:normal;font-weight:500;font-size:12px;color:var(--ink-soft)}
+.hist .t em.win{color:var(--ok)}
+.hist small{color:var(--ink-soft)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--felt);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><h1>À première vue</h1><div class="felt"></div></div>
+    <div class="status" id="status">150 notes · 3 minutes</div>
+    <button class="btn danger" id="abandon" hidden>Abandonner</button>
+  </header>
+
+  <section id="setup">
+    <div class="row"><h2>Séance</h2>
+      <div class="seg" role="group" aria-label="Clé">
+        <button data-clef="sol" aria-pressed="true">Clé de sol</button>
+        <button data-clef="fa" aria-pressed="false">Clé de fa</button>
+      </div>
+    </div>
+    <div class="levels" id="levels" role="group" aria-label="Niveau"></div>
+    <p class="lvinfo" id="lvinfo"></p>
+    <button class="go" id="start">Commencer</button>
+    <p class="muted">+1 par note juste à la bonne octave · −1 par erreur · 130 points débloquent le niveau suivant.</p>
+  </section>
+
+  <section class="result" id="result" hidden></section>
+
+  <div class="stats" aria-live="polite">
+    <div class="stat"><span>Score</span><b id="sScore">0</b></div>
+    <div class="stat"><span>Temps</span><b id="sTime">3:00</b></div>
+    <div class="stat"><span>Notes</span><b id="sNotes">0/150</b></div>
+    <div class="stat"><span>Série</span><b id="sStreak">0</b></div>
+  </div>
+  <div class="meter"><i id="bar"></i></div>
+
+  <div class="staff">
+    <svg id="line" role="img" aria-label="Ligne de notes à lire"></svg>
+    <svg id="next" class="next" hidden aria-hidden="true"></svg>
+    <div class="feedback idle" id="fb" aria-live="polite">Choisis une clé et un niveau pour commencer.</div>
+  </div>
+
+  <div class="kb" id="kb" aria-label="Clavier"></div>
+  <div class="kbbar">
+    <span id="kbinfo"></span>
+    <span class="tgs">
+      <label class="tg"><input type="checkbox" id="optSound" checked> Son</label>
+      <label class="tg"><input type="checkbox" id="optNames" checked> Noms</label>
+    </span>
+  </div>
+
+  <section id="history"></section>
+</div>
+
+<script>
+(function(){
+"use strict";
+const GCLEF="M314 801Q300 854 291.0 906.0Q282 958 282 1012Q282 1059 288.5 1100.5Q295 1142 307 1177Q320 1217 341.0 1252.5Q362 1288 385.5 1311.0Q409 1334 427 1334Q451 1334 493 1249Q514 1206 524.0 1156.0Q534 1106 534 1049Q534 978 515.0 907.5Q496 837 459.5 775.0Q423 713 372 666L407 498Q422 500 432.0 501.0Q442 502 447 502Q508 502 556.0 467.5Q604 433 632.5 377.0Q661 321 661 254Q661 177 621.5 115.5Q582 54 503 25Q508 8 532 -117Q538 -147 541.0 -164.5Q544 -182 545.0 -195.0Q546 -208 546 -225Q546 -275 521.5 -314.5Q497 -354 455.5 -376.0Q414 -398 363 -398Q311 -398 271.0 -378.5Q231 -359 208.0 -324.5Q185 -290 185 -245Q185 -197 211.5 -165.0Q238 -133 287 -133Q329 -133 355.5 -163.5Q382 -194 382 -236Q382 -272 357.0 -299.0Q332 -326 292 -326H282Q308 -365 364 -365Q433 -365 472.0 -320.0Q511 -275 511 -205Q511 -188 507.0 -159.5Q503 -131 493 -91Q483 -51 477.5 -25.0Q472 1 470 12Q436 2 390 2Q304 2 222 52Q142 102 96.0 184.0Q50 266 50 361Q50 451 91 530Q132 609 192.5 675.0Q253 741 314 801ZM341 826Q364 838 390.0 870.5Q416 903 440.0 945.0Q464 987 479.0 1029.5Q494 1072 494 1106Q494 1142 483.0 1163.0Q472 1184 445 1184Q421 1184 398.5 1162.0Q376 1140 358.5 1103.5Q341 1067 331.0 1022.0Q321 977 321 930Q321 898 327.5 872.0Q334 846 341 826ZM398 379Q371 373 347.0 353.5Q323 334 308.5 306.5Q294 279 294 248Q294 223 307.0 196.5Q320 170 339 154Q352 142 365 136Q380 129 380 123Q380 120 370 117Q332 126 301.5 151.0Q271 176 253.5 211.5Q236 247 236 287Q236 330 253.5 370.0Q271 410 302.5 442.0Q334 474 374 490L345 641Q229 547 174.5 456.5Q120 366 120 277Q120 212 154.0 156.0Q188 100 247.0 65.5Q306 31 380 31Q400 31 420.5 35.0Q441 39 464 45ZM495 55Q593 97 593 227Q593 270 571.0 305.5Q549 341 512.0 362.0Q475 383 429 383Z", FCLEF="M50 123Q216 231 288 301Q336 348 373.0 408.5Q410 469 431.5 536.0Q453 603 453 669Q453 728 435.0 773.5Q417 819 383.0 845.0Q349 871 302 871Q284 871 264.5 867.0Q245 863 224 855Q181 839 158.0 813.5Q135 788 135 765Q135 756 143.0 752.0Q151 748 158 748Q168 748 183 752Q190 754 196.5 755.0Q203 756 210 756Q248 756 272.0 733.5Q296 711 296 674Q296 638 266.0 612.0Q236 586 195 586Q146 586 111.0 617.0Q76 648 76 697Q76 756 109.0 802.0Q142 848 198.5 874.0Q255 900 324 900Q400 900 460.0 867.0Q520 834 555.5 776.5Q591 719 591 646Q591 551 538 464Q511 419 476.5 379.0Q442 339 389.0 297.5Q336 256 256.0 208.0Q176 160 57 101ZM687 809Q710 809 726.0 793.0Q742 777 742 754Q742 731 726.0 715.5Q710 700 687 700Q664 700 648.0 715.5Q632 731 632 754Q632 777 648.0 793.0Q664 809 687 809ZM687 589Q710 589 726.0 573.0Q742 557 742 534Q742 511 726.0 495.5Q710 480 687 480Q664 480 648.0 495.5Q632 511 632 534Q632 557 648.0 573.0Q664 589 687 589Z";
+
+/* ---------- Règles (reprises de l'appli Mac « À première vue » v0.6) ---------- */
+const TOTAL=150, GOAL=130, DURATION=180, LEVELS=10;
+const NAMES=["Do","Ré","Mi","Fa","Sol","La","Si"], OFF=[0,2,4,5,7,9,11];
+const PC=["Do","Do♯","Ré","Ré♯","Mi","Fa","Fa♯","Sol","Sol♯","La","La♯","Si"];
+// Un « degré » : Do4 (do central) = 28 ; octave = degré / 7.
+const CLEFS={sol:{name:"Clé de sol",bottom:30},fa:{name:"Clé de fa",bottom:18}};
+const other=c=>c==="sol"?"fa":"sol";
+const label=s=>NAMES[s%7]+Math.floor(s/7);
+const midiOf=s=>12+Math.floor(s/7)*12+OFF[s%7];
+const TITLES=["Premiers repères","Élargissement","Toute la portée","Autour de la portée","Lignes supplémentaires","Registre élargi","Trois lignes maximum","Deux portées","Changements de clé","Octaves 8va / 8vb"];
+const RANGES={sol:[[28,32],[28,35],[28,38],[28,40],[26,40],[26,42],[24,44]],fa:[[16,20],[16,24],[16,28],[16,28],[16,30],[14,30],[12,32]]};
+const range=(clef,level)=>RANGES[clef][Math.max(0,Math.min(6,level-1))];
+const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+function generate(level,clef,count){
+  const out=[];
+  for(let i=0;i<count;i++){
+    const wc=level<8?clef:(Math.floor(i/4)%2===0?clef:other(clef));
+    const shift=level===10&&Math.floor(i/4)%3!==0?(wc==="sol"?1:-1):0;
+    const r=range(wc,level), written=rnd(r[0],r[1]);
+    out.push({step:written+shift*7,clef:wc,shift,written});
+  }
+  return out;
+}
+const stars=s=>s>=150?3:s>=140?2:s>=GOAL?1:0;
+
+/* ---------- Stockage local ---------- */
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+let history=store.get("apv-historique",[]);
+let prefs=Object.assign({clef:"sol",sound:true,names:true},store.get("apv-prefs",{}));
+function unlockedFor(c){
+  const saved=store.get("apv-niveau-"+c,1);
+  const passed=history.filter(h=>h.clef===c&&h.score>=GOAL&&!h.abandon).map(h=>h.niveau+1);
+  return Math.min(LEVELS,Math.max(1,saved,...passed));
+}
+let unlocked={sol:unlockedFor("sol"),fa:unlockedFor("fa")};
+let clef=prefs.clef, level=unlocked[clef];
+
+/* ---------- État de séance ---------- */
+let S=null;           // séance en cours ou terminée
+let sample=[];        // ligne d'aperçu hors séance
+let timer=0;
+const $=id=>document.getElementById(id);
+
+/* ---------- Portée (SVG) ---------- */
+const W=360, GAP=10, HS=GAP/2;
+function clefGlyph(c,x,bot){
+  const K=GAP/244*1.0;
+  return `<path transform="translate(${x} ${bot+GAP*K}) scale(${K} ${-K})" d="${c==="sol"?GCLEF:FCLEF}"/>`;
+}
+const shownClef=notes=>notes.length?notes[0].clef:clef;
+function staffLines(bot){let s="";for(let i=0;i<5;i++)s+=`<line x1="4" x2="${W-4}" y1="${bot-i*GAP}" y2="${bot-i*GAP}"/>`;return s}
+function drawLine(svg,notes,start,lvl,active){
+  const dual=lvl===8;
+  const bots=dual?{sol:96,fa:218}:null, single=112;
+  const botOf=c=>dual?bots[c]:single;
+  // Hauteur ajustée à la tessiture du niveau (même cadre pour toutes les lignes du niveau)
+  const used=lvl<8?[shownClef(notes)]:["sol","fa"];
+  let top=1e9,bottom=-1e9;
+  used.forEach(c=>{const r=range(c,lvl),b=botOf(c);
+    top=Math.min(top,b-Math.max(8,r[1]-CLEFS[c].bottom)*HS-34);
+    bottom=Math.max(bottom,b-Math.min(0,r[0]-CLEFS[c].bottom)*HS+34)});
+  if(lvl===10){top-=10;bottom+=10}
+  const H=bottom-top;
+  svg.setAttribute("viewBox",`0 ${top} ${W} ${H}`);
+  let lines="", glyphs="", fg="";
+  const rows=dual?["sol","fa"]:[null];
+  rows.forEach(r=>{lines+=staffLines(botOf(r))});
+  const shown=notes.slice(start,start+12);
+  // Clés en début de ligne
+  const lead=34;
+  if(dual){glyphs+=clefGlyph("sol",8,bots.sol)+clefGlyph("fa",8,bots.fa);
+    fg+=`<line x1="4" x2="4" y1="${bots.sol-40}" y2="${bots.fa}" stroke-width="2.4"/>`}
+  else if(shown.length) glyphs+=clefGlyph(shown[0].clef,8,single);
+  const mw=(W-4-lead)/3;
+  let prevClef=shown.length?shown[0].clef:null;
+  for(let m=0;m<3;m++){
+    const first=m*4; if(first>=shown.length) break;
+    const mx=lead+m*mw, n0=shown[first];
+    let pad=6;
+    if(!dual&&m>0&&n0.clef!==prevClef){glyphs+=clefGlyph(n0.clef,mx+3,single);pad=32}
+    prevClef=n0.clef;
+    rows.forEach(r=>{const b=botOf(r);fg+=`<line x1="${mx+mw}" x2="${mx+mw}" y1="${b}" y2="${b-4*GAP}"/>`});
+    if(n0.shift){
+      const above=n0.shift>0, yy=above?top+12:bottom-10;
+      fg+=`<text x="${mx+pad}" y="${yy+4}" font-size="12" font-style="italic" fill="var(--ink)" stroke="none">${above?"8va":"8vb"}</text>`;
+      fg+=`<polyline points="${mx+pad+24},${yy} ${mx+mw-4},${yy} ${mx+mw-4},${yy+(above?7:-7)}" fill="none" stroke-dasharray="3 3"/>`;
+    }
+    const slot=(mw-pad-6)/4;
+    for(let k=0;k<4&&first+k<shown.length;k++){
+      const n=shown[first+k], gi=start+first+k;
+      const x=mx+pad+slot*(k+.5);
+      const bot=botOf(n.clef), rel=n.written-CLEFS[n.clef].bottom, y=bot-rel*HS;
+      const isActive=active&&S&&S.running&&gi===S.index, done=active&&S&&gi<S.index;
+      if(isActive) glyphs+=`<rect x="${x-11}" y="${Math.min(bot-4*GAP,y)-26}" width="22" height="${Math.max(bot,y)-Math.min(bot-4*GAP,y)+52}" rx="8" fill="var(--felt-soft)"/>`;
+      let led="";
+      if(rel<0) for(let l=-2;l>=rel;l-=2) led+=`<line x1="${x-10}" x2="${x+10}" y1="${bot-l*HS}" y2="${bot-l*HS}"/>`;
+      if(rel>8) for(let l=10;l<=rel;l+=2) led+=`<line x1="${x-10}" x2="${x+10}" y1="${bot-l*HS}" y2="${bot-l*HS}"/>`;
+      const col=isActive?"var(--felt)":done?"var(--ink-soft)":"var(--ink)", op=done?.45:1;
+      const down=rel>=4, sx=down?x-5.6:x+5.6;
+      fg+=`<g opacity="${op}">${led}<line x1="${sx}" x2="${sx}" y1="${y}" y2="${y+(down?28:-28)}" stroke="${col}" stroke-width="1.3"/>`+
+          `<ellipse cx="${x}" cy="${y}" rx="6.4" ry="4.6" transform="rotate(-22 ${x} ${y})" fill="${col}" stroke="none"/></g>`;
+      if(dual){ // soupir sur l'autre portée : pas d'accord à jouer
+        const ob=bots[other(n.clef)]-2*GAP;
+        fg+=`<path d="M${x-2} ${ob-11} l4 5 l-4 5 l4 5 q-6 -2 -2 6" fill="none" stroke="var(--ink-soft)" stroke-width="1.6" opacity=".55"/>`;
+      }
+    }
+  }
+  svg.innerHTML=`<g stroke="var(--ink-soft)" stroke-width="1">${lines}</g><g fill="var(--ink)">${glyphs}</g><g stroke="var(--ink)" stroke-width="1">${fg}</g>`;
+}
+function renderStaff(){
+  if(S&&(S.running||S.finished)){
+    const start=Math.floor(Math.min(S.index,TOTAL-1)/12)*12;
+    drawLine($("line"),S.notes,start,S.level,true);
+    const preview=S.running&&S.index%12>=8&&start+12<S.notes.length;
+    $("next").hidden=!preview;
+    if(preview) drawLine($("next"),S.notes,start+12,S.level,false);
+  }else{drawLine($("line"),sample,0,level,false);$("next").hidden=true}
+}
+
+/* ---------- Clavier ---------- */
+function kbOctaves(lvl,c){
+  const clefs=lvl<8?[c]:["sol","fa"];
+  let lo=99,hi=0;
+  clefs.forEach(k=>{const r=range(k,lvl);let a=r[0],b=r[1];if(lvl===10){if(k==="sol")b+=7;else a-=7}lo=Math.min(lo,a);hi=Math.max(hi,b)});
+  return [Math.floor(lo/7),Math.floor(hi/7)];
+}
+function buildKeys(){
+  const kb=$("kb"); kb.innerHTML="";
+  let [o0,o1]=kbOctaves(level,clef);
+  // Jusqu'à 3 octaves : une octave par rangée (grandes touches). Au-delà : deux octaves par rangée.
+  const per=o1-o0+1<=3?1:2;
+  if(per===2&&(o1-o0+1)%2) o0>0?o0--:o1++;
+  const n=o1-o0+1, rows=n/per;
+  const h=rows<=1?150:rows<=2?112:rows<=3?92:84;
+  const bw=9.5/per;
+  for(let top=o1;top>=o0;top-=per){
+    const row=document.createElement("div"); row.className="oct"; row.style.height=h+"px"; if(per===2) row.style.gap="2px";
+    for(let o=top-per+1;o<=top;o++) NAMES.forEach((nm,i)=>{
+      const step=o*7+i, b=document.createElement("button");
+      b.className="w"+(step===28?" mid":""); b.dataset.step=step; b.setAttribute("aria-label",label(step));
+      const full=prefs.names&&(per===1||i===0);
+      b.innerHTML=full?(i===0?`${nm}<span class="o">${o}</span>`:nm):(i===0?`<span class="o">${o}</span>`:"");
+      b.addEventListener("pointerdown",e=>{e.preventDefault();press(step,midiOf(step),b)});
+      row.appendChild(b);
+    });
+    for(let j=0;j<per;j++){
+      const o=top-per+1+j;
+      [[1,1],[3,2],[6,4],[8,5],[10,6]].forEach(([pc,pos])=>{
+        const midi=12+o*12+pc, b=document.createElement("button");
+        b.className="b"; b.dataset.midi=midi; b.style.width=bw+"%";
+        b.style.left=`calc(${(j*7+pos)/(7*per)*100}% - ${bw/2}%)`;
+        b.setAttribute("aria-label",PC[pc]+o);
+        b.addEventListener("pointerdown",e=>{e.preventDefault();press(null,midi,b)});
+        row.appendChild(b);
+      });
+    }
+    kb.appendChild(row);
+  }
+  $("kbinfo").textContent=n>1?`${n} octaves · Do${o0} → Si${o1} · aigu en haut`:`Octave ${o0}`;
+  kb.classList.toggle("dense",per===2);
+}
+function clearMarks(){document.querySelectorAll(".hit-ko,.hit-ok").forEach(k=>k.classList.remove("hit-ko","hit-ok"))}
+
+/* ---------- Son synthétisé (même recette que l'appli Mac) ---------- */
+let ac=null;
+function play(midi){
+  if(!prefs.sound) return;
+  try{
+    ac=ac||new (window.AudioContext||window.webkitAudioContext)();
+    if(ac.state!=="running") ac.resume();
+    const f=440*Math.pow(2,(midi-69)/12), t=ac.currentTime, g=ac.createGain();
+    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.32,t+.006); g.gain.exponentialRampToValueAtTime(.001,t+.7);
+    g.connect(ac.destination);
+    for(let hm=1;hm<=5;hm++){
+      if(f*hm>ac.sampleRate*.46) break;
+      const o=ac.createOscillator(), gh=ac.createGain();
+      o.frequency.value=f*hm; gh.gain.value=1/(hm*hm); o.connect(gh); gh.connect(g); o.start(t); o.stop(t+.72);
+    }
+  }catch(e){}
+}
+
+/* ---------- Jeu ---------- */
+function press(step,midi,el){
+  play(midi);
+  if(!S||!S.running){clearMarks();el.classList.add(step!==null?"hit-ok":"hit-ko");setTimeout(()=>el.classList.remove("hit-ok","hit-ko"),180);return}
+  if(Date.now()>=S.deadline){finish();return}
+  clearMarks();
+  const n=S.notes[S.index];
+  if(step===n.step){
+    S.score++;S.index++;S.streak++;S.best=Math.max(S.best,S.streak);
+    el.classList.add("hit-ok"); setTimeout(()=>el.classList.remove("hit-ok"),160);
+    fb("ok",S.streak%10===0?`${S.streak} notes sans erreur !`:"Juste ! Continue.");
+    if(S.index===S.notes.length){finish();return}
+  }else{
+    S.score--;S.errors++;S.streak=0;
+    el.classList.add("hit-ko");
+    fb("ko","Essaie encore : la note et son octave doivent correspondre.");
+  }
+  if(S.score+(TOTAL-S.index)<GOAL){finish({unreachable:true});return}
+  renderStats(); renderStaff();
+}
+function fb(c,t){const e=$("fb");e.className="feedback "+c;e.textContent=t}
+
+let wakeLock=null;
+function start(){
+  const prev=history.filter(h=>h.clef===clef&&h.niveau===level&&!h.abandon).map(h=>h.score);
+  S={running:true,finished:false,level,clef,notes:generate(level,clef,TOTAL),index:0,score:0,errors:0,streak:0,best:0,
+     deadline:Date.now()+DURATION*1000,record:prev.length?Math.max(...prev):null};
+  clearMarks(); fb("idle","Joue la note surlignée, à la bonne octave.");
+  try{navigator.wakeLock&&navigator.wakeLock.request("screen").then(l=>wakeLock=l).catch(()=>{})}catch(e){}
+  clearInterval(timer); timer=setInterval(tick,200);
+  render(); window.scrollTo({top:0});
+}
+function tick(){if(!S||!S.running)return;if(Date.now()>=S.deadline){finish();return}renderStats()}
+function finish(o={}){
+  if(!S||!S.running) return;
+  clearInterval(timer); try{wakeLock&&wakeLock.release()}catch(e){} wakeLock=null;
+  S.running=false;S.finished=true;S.abandon=!!o.abandon;S.unreachable=!!o.unreachable;
+  S.passed=!S.abandon&&!S.unreachable&&S.score>=GOAL;
+  if(S.passed){const nx=Math.max(unlocked[S.clef],Math.min(LEVELS,S.level+1));unlocked[S.clef]=nx;store.set("apv-niveau-"+S.clef,nx)}
+  fb(S.passed?"ok":"idle",S.passed?(S.level<LEVELS?`Bravo ! ${S.score} points : niveau ${S.level+1} disponible.`:"Bravo ! Objectif atteint au dernier niveau.")
+     :S.unreachable?"Objectif devenu inaccessible : réessaie !":S.abandon?"Séance interrompue.":"Séance terminée. Objectif : 130 points.");
+  history.push({date:Date.now()/1000,clef:S.clef,niveau:S.level,score:S.score,notes:S.index,erreurs:S.errors,abandon:S.abandon,
+    motif:S.unreachable?"objectif-inaccessible":S.abandon?"abandon":"terminee","meilleure-serie":S.best,etoiles:S.passed?stars(S.score):0});
+  history=history.slice(-200); store.set("apv-historique",history);
+  clearMarks(); render();
+}
+
+/* ---------- Affichage ---------- */
+function renderStats(){
+  const sc=S?S.score:0, idx=S?S.index:0;
+  const rem=S?(S.running?Math.max(0,Math.ceil((S.deadline-Date.now())/1000)):S.finished?Math.max(0,Math.ceil((S.deadline-Date.now())/1000)):DURATION):DURATION;
+  $("sScore").textContent=sc;
+  $("sTime").textContent=`${Math.floor(rem/60)}:${String(rem%60).padStart(2,"0")}`;
+  $("sTime").classList.toggle("low",!!(S&&S.running&&rem<=20));
+  $("sNotes").textContent=`${Math.min(idx,TOTAL)}/${TOTAL}`;
+  $("sStreak").textContent=S?S.streak:0;
+  $("bar").style.width=(idx/TOTAL*100)+"%";
+}
+function renderSetup(){
+  document.querySelectorAll("[data-clef]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.clef===clef));
+  const L=$("levels"); L.innerHTML="";
+  for(let n=1;n<=LEVELS;n++){
+    const r=range(clef,n), b=document.createElement("button");
+    b.innerHTML=`<b>${n}</b><small>${n>=8?["2 portées","Clés","8va/8vb"][n-8]:label(r[0])+"–"+label(r[1])}</small>`;
+    b.setAttribute("aria-pressed",n===level); b.disabled=n>unlocked[clef];
+    if(n===unlocked[clef]) b.classList.add("here");
+    b.setAttribute("aria-label",`Niveau ${n}${n>unlocked[clef]?", verrouillé":""}`);
+    b.onclick=()=>chooseLevel(n);
+    L.appendChild(b);
+  }
+  const r=range(clef,level);
+  $("lvinfo").innerHTML=`<b>Niveau ${level} · ${TITLES[level-1]}</b><br><span class="muted">${level>=8?"Les deux clés, ":""}${level<8?label(r[0])+" → "+label(r[1]):""}${level>=8?"notes jusqu'à trois lignes supplémentaires":""} · tu es au niveau ${unlocked[clef]} sur ${LEVELS}</span>`;
+  $("start").textContent=S&&S.finished?"Nouvelle séance":"Commencer";
+}
+function renderResult(){
+  const R=$("result");
+  if(!S||!S.finished){R.hidden=true;return}
+  R.hidden=false;
+  let h=`<div class="row"><div class="big">${S.score} points</div>${S.passed?`<div class="stars">${"★".repeat(stars(S.score))}</div>`:""}</div>`;
+  h+=`<p class="muted">${S.index} notes trouvées − ${S.errors} erreurs = ${S.score} points · meilleure série : ${S.best}</p>`;
+  if(S.record!==null&&S.score>S.record&&!S.abandon) h+=`<p class="okt" style="margin:0">Nouveau record du niveau ! (ancien : ${S.record})</p>`;
+  if(S.unreachable) h+=`<p class="muted">Séance écourtée : même sans autre erreur, les 130 points n'étaient plus accessibles.</p>`;
+  if(!S.passed&&S.score<GOAL&&!S.abandon) h+=`<p class="muted">Il manque ${GOAL-S.score} point${GOAL-S.score>1?"s":""} pour débloquer la suite.</p>`;
+  if(S.passed&&S.level<LEVELS) h+=`<button class="go alt" id="nextLevel">Passer au niveau ${S.level+1}</button>`;
+  else if(S.passed) h+=`<p class="okt" style="margin:0">Les dix niveaux de cette clé sont débloqués.</p>`;
+  R.innerHTML=h;
+  const nb=$("nextLevel"); if(nb) nb.onclick=()=>{chooseLevel(S.level+1);start()};
+}
+function renderHistory(){
+  const all=history.filter(h=>h.clef===clef), done=all.filter(h=>!h.abandon);
+  const best=done.length?Math.max(...done.map(h=>h.score)):null;
+  const lvRec=done.filter(h=>h.niveau===level).map(h=>h.score);
+  const wins=history.filter(h=>!h.abandon&&h.score>=GOAL);
+  const badges=[["Première réussite",wins.length>0],["Réussite en clé de fa",wins.some(h=>h.clef==="fa")],["Sans faute · 150 notes",history.some(h=>!h.abandon&&h.notes===150&&h.erreurs===0)]];
+  const fmt=new Intl.DateTimeFormat("fr-FR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+  let h=`<div class="row"><h2>Tes résultats · ${CLEFS[clef].name}</h2>${best!==null?`<span class="okt">Meilleur : ${best}/150</span>`:""}</div>`;
+  if(lvRec.length) h+=`<p class="muted">Record du niveau ${level} : <b>${Math.max(...lvRec)} points</b></p>`;
+  h+=`<div class="chips">${badges.map(([t,on])=>`<span class="chip${on?" on":""}">${on?"★":"☆"} ${t}</span>`).join("")}</div>`;
+  const recent=all.slice(-5).reverse();
+  if(!recent.length) h+=`<p class="muted">Tes séances seront conservées ici, sur cet appareil.</p>`;
+  else{
+    h+=`<div class="hist">`+recent.map(r=>{
+      const st=r.abandon?"Interrompue":r.motif==="objectif-inaccessible"?"Objectif inaccessible":r.score>=GOAL?"Réussie "+"★".repeat(stars(r.score)):"À poursuivre";
+      return `<div><div class="t">Niveau ${r.niveau} · ${r.score} points<em class="${!r.abandon&&r.score>=GOAL?"win":""}">${st}</em></div><small>${r.notes} trouvées − ${r.erreurs} erreurs · ${fmt.format(new Date(r.date*1000))}</small></div>`}).join("")+`</div>`;
+  }
+  h+=`<p class="muted">Les 200 dernières séances restent sur cet appareil (rien n'est envoyé).</p>`;
+  $("history").innerHTML=h;
+}
+function render(){
+  const run=!!(S&&S.running);
+  $("setup").hidden=run; $("history").hidden=run; $("abandon").hidden=!run; $("status").hidden=run;
+  if(run){$("result").hidden=true}else{renderSetup();renderResult();renderHistory()}
+  renderStats(); renderStaff();
+}
+function chooseLevel(n){
+  level=n; S=null; sample=generate(level,clef,12); clearMarks();
+  fb("idle",`Niveau ${n} · ${TITLES[n-1]}`); buildKeys(); render();
+}
+
+/* ---------- Événements ---------- */
+document.querySelectorAll("[data-clef]").forEach(b=>b.onclick=()=>{clef=b.dataset.clef;prefs.clef=clef;store.set("apv-prefs",prefs);chooseLevel(unlocked[clef])});
+$("start").onclick=start;
+$("abandon").onclick=()=>finish({abandon:true});
+$("optSound").checked=prefs.sound; $("optNames").checked=prefs.names;
+$("optSound").onchange=e=>{prefs.sound=e.target.checked;store.set("apv-prefs",prefs)};
+$("optNames").onchange=e=>{prefs.names=e.target.checked;store.set("apv-prefs",prefs);buildKeys()};
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S&&S.running){tick();try{navigator.wakeLock&&navigator.wakeLock.request("screen").then(l=>wakeLock=l).catch(()=>{})}catch(e){}}});
+
+chooseLevel(level);
+window.__apv=()=>S; // inspection pour les tests
+})();
+</script>
+</body>
+</html>
