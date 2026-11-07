@@ -5,7 +5,7 @@ Entraînement à la lecture de notes : **150 notes, 3 minutes**. Version web ins
 ## Règles
 
 - +1 par note juste **à la bonne octave**, −1 par erreur ; la note reste active tant qu'elle n'est pas trouvée.
-- 130 points débloquent le niveau suivant (★ dès 130, ★★ dès 140, ★★★ à 150).
+- 130 points valident le niveau, qui passe en vert ; tous les niveaux restent accessibles (★ dès 130, ★★ dès 140, ★★★ à 150).
 - La séance s'arrête dès que les 130 points ne sont plus atteignables.
 - Douze notes par ligne (3 mesures de 4 noires) ; la ligne suivante apparaît pendant la dernière mesure.
 

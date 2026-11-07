@@ -82,8 +82,10 @@ h2{font-family:var(--f-display);font-weight:400;font-size:17px;margin:0}
 .levels small{font-size:10px;color:var(--ink-soft);white-space:nowrap}
 .levels button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .levels button[aria-pressed="true"] small{color:var(--paper);opacity:.8}
-.levels button:disabled{opacity:.38;cursor:default}
-.levels button.here::after{content:"";position:absolute;top:5px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--felt)}
+.levels button.won{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.levels button.won small{color:var(--ok)}
+.levels button.won[aria-pressed="true"]{background:var(--ok);color:var(--paper)}
+.levels button.won[aria-pressed="true"] small{color:var(--paper)}
 .lvinfo{font-size:13.5px;margin:0}
 .lvinfo b{font-weight:600}
 .go{font:inherit;font-weight:600;font-size:16px;border:0;background:var(--felt);color:#fff;padding:12px;border-radius:11px;cursor:pointer}
@@ -127,7 +129,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--felt);outline-o
     <div class="levels" id="levels" role="group" aria-label="Niveau"></div>
     <p class="lvinfo" id="lvinfo"></p>
     <button class="go" id="start">Commencer</button>
-    <p class="muted">+1 par note juste à la bonne octave · −1 par erreur · 130 points débloquent le niveau suivant.</p>
+    <p class="muted">+1 par note juste à la bonne octave · −1 par erreur · 130 points valident le niveau (il passe en vert). Tous les niveaux restent ouverts.</p>
   </section>
 
   <section class="result" id="result" hidden></section>
@@ -196,7 +198,13 @@ function unlockedFor(c){
   const passed=history.filter(h=>h.clef===c&&h.score>=GOAL&&!h.abandon).map(h=>h.niveau+1);
   return Math.min(LEVELS,Math.max(1,saved,...passed));
 }
+function wonFor(c){
+  const w=new Set(history.filter(h=>h.clef===c&&h.score>=GOAL&&!h.abandon).map(h=>h.niveau));
+  for(let n=1;n<store.get("apv-niveau-"+c,1);n++) w.add(n);
+  return w;
+}
 let unlocked={sol:unlockedFor("sol"),fa:unlockedFor("fa")};
+let won={sol:wonFor("sol"),fa:wonFor("fa")};
 let clef=prefs.clef, level=unlocked[clef];
 
 /* ---------- État de séance ---------- */
@@ -431,8 +439,8 @@ function finish(o={}){
   clearInterval(timer); try{wakeLock&&wakeLock.release()}catch(e){} wakeLock=null;
   S.running=false;S.finished=true;S.abandon=!!o.abandon;S.unreachable=!!o.unreachable;
   S.passed=!S.abandon&&!S.unreachable&&S.score>=GOAL;
-  if(S.passed){const nx=Math.max(unlocked[S.clef],Math.min(LEVELS,S.level+1));unlocked[S.clef]=nx;store.set("apv-niveau-"+S.clef,nx)}
-  fb(S.passed?"ok":"idle",S.passed?(S.level<LEVELS?`Bravo ! ${S.score} points : niveau ${S.level+1} disponible.`:"Bravo ! Objectif atteint au dernier niveau.")
+  if(S.passed){const nx=Math.max(unlocked[S.clef],Math.min(LEVELS,S.level+1));unlocked[S.clef]=nx;store.set("apv-niveau-"+S.clef,nx);won[S.clef].add(S.level)}
+  fb(S.passed?"ok":"idle",S.passed?(S.level<LEVELS?`Bravo ! ${S.score} points : niveau ${S.level} réussi.`:"Bravo ! Objectif atteint au dernier niveau.")
      :S.unreachable?"Objectif devenu inaccessible : réessaie !":S.abandon?"Séance interrompue.":"Séance terminée. Objectif : 130 points.");
   history.push({date:Date.now()/1000,clef:S.clef,niveau:S.level,score:S.score,notes:S.index,erreurs:S.errors,abandon:S.abandon,
     motif:S.unreachable?"objectif-inaccessible":S.abandon?"abandon":"terminee","meilleure-serie":S.best,etoiles:S.passed?stars(S.score):0});
@@ -457,14 +465,13 @@ function renderSetup(){
   for(let n=1;n<=LEVELS;n++){
     const r=range(clef,n), b=document.createElement("button");
     b.innerHTML=`<b>${n}</b><small>${n>=8?["2 portées","Clés","8va/8vb"][n-8]:label(r[0])+"–"+label(r[1])}</small>`;
-    b.setAttribute("aria-pressed",n===level); b.disabled=n>unlocked[clef];
-    if(n===unlocked[clef]) b.classList.add("here");
-    b.setAttribute("aria-label",`Niveau ${n}${n>unlocked[clef]?", verrouillé":""}`);
+    b.setAttribute("aria-pressed",n===level); if(won[clef].has(n)) b.classList.add("won");
+    b.setAttribute("aria-label",`Niveau ${n}${won[clef].has(n)?", réussi":""}`);
     b.onclick=()=>chooseLevel(n);
     L.appendChild(b);
   }
   const r=range(clef,level);
-  $("lvinfo").innerHTML=`<b>Niveau ${level} · ${TITLES[level-1]}</b><br><span class="muted">${level>=8?"Les deux clés, ":""}${level<8?label(r[0])+" → "+label(r[1]):""}${level>=8?"notes jusqu'à trois lignes supplémentaires":""} · tu es au niveau ${unlocked[clef]} sur ${LEVELS}</span>`;
+  $("lvinfo").innerHTML=`<b>Niveau ${level} · ${TITLES[level-1]}</b><br><span class="muted">${level>=8?"Les deux clés, ":""}${level<8?label(r[0])+" → "+label(r[1]):""}${level>=8?"notes jusqu'à trois lignes supplémentaires":""} · ${won[clef].has(level)?"réussi ✓":"pas encore réussi"} · ${won[clef].size} niveau${won[clef].size>1?"x":""} réussi${won[clef].size>1?"s":""} sur ${LEVELS}</span>`;
   $("start").textContent=S&&S.finished?"Nouvelle séance":"Commencer";
 }
 function renderResult(){
@@ -475,9 +482,9 @@ function renderResult(){
   h+=`<p class="muted">${S.index} notes trouvées − ${S.errors} erreurs = ${S.score} points · meilleure série : ${S.best}</p>`;
   if(S.record!==null&&S.score>S.record&&!S.abandon) h+=`<p class="okt" style="margin:0">Nouveau record du niveau ! (ancien : ${S.record})</p>`;
   if(S.unreachable) h+=`<p class="muted">Séance écourtée : même sans autre erreur, les 130 points n'étaient plus accessibles.</p>`;
-  if(!S.passed&&S.score<GOAL&&!S.abandon) h+=`<p class="muted">Il manque ${GOAL-S.score} point${GOAL-S.score>1?"s":""} pour débloquer la suite.</p>`;
+  if(!S.passed&&S.score<GOAL&&!S.abandon) h+=`<p class="muted">Il manque ${GOAL-S.score} point${GOAL-S.score>1?"s":""} pour réussir ce niveau.</p>`;
   if(S.passed&&S.level<LEVELS) h+=`<button class="go alt" id="nextLevel">Passer au niveau ${S.level+1}</button>`;
-  else if(S.passed) h+=`<p class="okt" style="margin:0">Les dix niveaux de cette clé sont débloqués.</p>`;
+  else if(S.passed) h+=`<p class="okt" style="margin:0">Dernier niveau réussi !</p>`;
   R.innerHTML=h;
   const nb=$("nextLevel"); if(nb) nb.onclick=()=>{chooseLevel(S.level+1);start()};
 }
