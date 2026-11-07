@@ -54,7 +54,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:24px;margin:0;letter-s
 .feedback{min-height:24px;text-align:center;font-weight:500;font-size:14.5px;padding:2px 8px 8px}
 .feedback.ok{color:var(--ok)} .feedback.ko{color:var(--felt)} .feedback.idle{color:var(--ink-soft)}
 /* Clavier : une seule rangée, proportions d'un vrai piano (touches 30 % plus étroites) */
-.kb{position:relative;width:100%;user-select:none;-webkit-user-select:none;touch-action:none}
+.kb{position:relative;width:100%;margin:0 auto;user-select:none;-webkit-user-select:none;touch-action:none}
 .kb button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;padding:0;position:absolute;top:0}
 .w{bottom:0;background:var(--key-white);border:1px solid var(--key-edge);border-radius:0 0 4px 4px}
 .w.mid::after{content:"";position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:min(6px,55%);aspect-ratio:1;border-radius:50%;background:var(--felt);opacity:.6}
@@ -339,19 +339,16 @@ function kbSteps(lvl,c){
 const KEY_RATIO=150/23.5, SHARP=[1,1,0,1,1,1,0]; // Do Ré _ Fa Sol La _ ont un dièse
 function buildKeys(){
   const kb=$("kb"); kb.innerHTML="";
-  const [n0,n1]=kbSteps(level,clef), need=n1-n0+1, all=KB_HI-KB_LO+1;
-  const Wd=kb.clientWidth||$("line").parentElement.clientWidth||340;
+  const [n0,n1]=kbSteps(level,clef);
+  // Tessiture du niveau + 5 touches blanches de chaque côté, dans les 73 touches (Do1 → Do7)
+  const a=Math.max(KB_LO,n0-5), n=Math.min(KB_HI,n1+5)-a+1;
   const land=innerWidth>innerHeight, playing=document.body.classList.contains("playing");
-  let n, center;
-  if(playing&&land){n=all;center=28}            // séance en paysage : les 73 touches, do central au milieu
-  else{
-    const Hmax=Math.min(150,Math.round(innerHeight*0.22));
-    n=Math.min(all,Math.max(need,Math.floor(Wd/(Hmax/KEY_RATIO))));
-    center=level>=8?28:clef==="sol"?34:22;        // milieu de la portée : Si4 en sol, Ré3 en fa
-  }
-  let a=Math.round(center-(n-1)/2);
-  a=Math.min(a,n0); a=Math.max(a,n1-n+1); a=Math.max(KB_LO,Math.min(a,KB_HI-n+1));
-  const ww=Wd/n, pc=100/n, bw=pc*0.58;
+  const Hmax=playing&&land?Math.max(90,Math.round(innerHeight*0.44)):Math.min(170,Math.round(innerHeight*0.24));
+  kb.style.width=""; const Wfull=kb.clientWidth||$("line").parentElement.clientWidth||340;
+  // Vraies proportions : si le clavier serait trop haut, on le rétrécit (centré) plutôt que de déformer les touches
+  const ww=Math.min(Wfull/n,Hmax/KEY_RATIO);
+  kb.style.width=Math.round(ww*n)+"px";
+  const pc=100/n, bw=pc*0.58;
   kb.style.height=Math.round(ww*KEY_RATIO)+"px";
   for(let k=0;k<n;k++){
     const step=a+k, b=document.createElement("button");
