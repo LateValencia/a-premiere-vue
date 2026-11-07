@@ -53,20 +53,15 @@ h1{font-family:var(--f-display);font-weight:400;font-size:24px;margin:0;letter-s
 .staff svg.next{opacity:.5;border-top:1px dashed var(--line)}
 .feedback{min-height:24px;text-align:center;font-weight:500;font-size:14.5px;padding:2px 8px 8px}
 .feedback.ok{color:var(--ok)} .feedback.ko{color:var(--felt)} .feedback.idle{color:var(--ink-soft)}
-/* Clavier : une octave par rangée (l'aigu en haut), touches larges comme dans Clé de lecture */
-.kb{display:flex;flex-direction:column;gap:6px;user-select:none;-webkit-user-select:none}
-.oct{position:relative;display:flex;gap:3px}
-.kb button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;padding:0}
-.w{flex:1;background:var(--key-white);border:1px solid var(--key-edge);border-radius:0 0 8px 8px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:6px!important;color:#5b6476;font-size:12.5px;line-height:1.1;position:relative}
-.w.mid::before{content:"";position:absolute;bottom:14px;width:7px;height:7px;border-radius:50%;background:var(--felt);opacity:.55}
-.w .o{font-size:10px;opacity:.75}
-.dense .w{border-radius:0 0 5px 5px;font-size:11px;padding-bottom:4px!important}
-.dense .w.mid::before{bottom:10px;width:6px;height:6px}
-.stat b{font-size:18px}
-.b{position:absolute;top:0;width:9.5%;height:58%;background:var(--key-black);border:0;border-radius:0 0 5px 5px}
+/* Clavier : une seule rangée, proportions d'un vrai piano (touches 30 % plus étroites) */
+.kb{position:relative;width:100%;user-select:none;-webkit-user-select:none;touch-action:none}
+.kb button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;padding:0;position:absolute;top:0}
+.w{bottom:0;background:var(--key-white);border:1px solid var(--key-edge);border-radius:0 0 4px 4px}
+.w.mid::after{content:"";position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:min(6px,55%);aspect-ratio:1;border-radius:50%;background:var(--felt);opacity:.6}
+.b{z-index:2;height:63.5%;background:var(--key-black);border:0;border-radius:0 0 3px 3px}
 .w.hit-ok{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
 .w.hit-ko,.b.hit-ko{background:var(--felt-soft);border:1px solid var(--felt)}
-.w:active{transform:translateY(1px)}
+.w:active{background:var(--line)}
 .kbbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--ink-soft)}
 .kbbar .tgs{display:flex;gap:14px}
 section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
@@ -107,6 +102,27 @@ label.tg input{width:16px;height:16px;accent-color:var(--felt);margin:0}
 .hist .t em{font-style:normal;font-weight:500;font-size:12px;color:var(--ink-soft)}
 .hist .t em.win{color:var(--ok)}
 .hist small{color:var(--ink-soft)}
+.stats .btn{align-self:stretch}
+#rotate{display:none;text-align:center;padding:40px 16px;color:var(--ink-soft)}
+#rotate b{display:block;font-family:var(--f-display);font-weight:400;font-size:22px;color:var(--ink);margin-bottom:6px}
+body.playing .stats{grid-template-columns:repeat(4,minmax(0,1fr)) auto}
+@media (orientation:portrait){
+  body.playing .staff,body.playing #kb,body.playing .kbbar{display:none}
+  body.playing #rotate{display:block}
+  body.playing .stats{grid-template-columns:repeat(4,minmax(0,1fr))}
+  body.playing .stats .btn{grid-column:1/-1}
+}
+@media (orientation:landscape){
+  body.playing{padding-top:max(6px,env(safe-area-inset-top,0px));padding-bottom:max(8px,env(safe-area-inset-bottom,0px))}
+  body.playing .wrap{max-width:none;height:calc(100dvh - max(6px,env(safe-area-inset-top,0px)) - max(8px,env(safe-area-inset-bottom,0px)));gap:6px}
+  body.playing header,body.playing .kbbar{display:none}
+  body.playing .stat{padding:3px 9px;display:flex;align-items:baseline;gap:8px}
+  body.playing .stat b{font-size:17px}
+  body.playing .staff{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:minmax(0,1fr) auto;padding:4px}
+  body.playing .staff svg{width:100%;height:100%}
+  body.playing .staff svg.next{border-top:0;border-left:1px dashed var(--line)}
+  body.playing .feedback{grid-column:1/3;padding:0 8px 2px;min-height:20px;font-size:13.5px}
+}
 button:focus-visible,input:focus-visible{outline:2px solid var(--felt);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -116,7 +132,6 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--felt);outline-o
   <header>
     <div><h1>À première vue</h1><div class="felt"></div></div>
     <div class="status" id="status">150 notes · 3 minutes</div>
-    <button class="btn danger" id="abandon" hidden>Abandonner</button>
   </header>
 
   <section id="setup">
@@ -139,6 +154,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--felt);outline-o
     <div class="stat"><span>Temps</span><b id="sTime">3:00</b></div>
     <div class="stat"><span>Notes</span><b id="sNotes">0/150</b></div>
     <div class="stat"><span>Série</span><b id="sStreak">0</b></div>
+    <button class="btn danger" id="abandon" hidden>Abandonner</button>
   </div>
   <div class="meter"><i id="bar"></i></div>
 
@@ -148,6 +164,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--felt);outline-o
     <div class="feedback idle" id="fb" aria-live="polite">Choisis une clé et un niveau pour commencer.</div>
   </div>
 
+  <div id="rotate"><b>Tourne ton iPhone</b>La séance se joue en mode paysage, avec tout le clavier sur une seule rangée.</div>
   <div class="kb" id="kb" aria-label="Clavier"></div>
   <div class="kbbar">
     <span id="kbinfo"></span>
@@ -303,9 +320,9 @@ function renderStaff(){
     const start=Math.floor(Math.min(S.index,TOTAL-1)/12)*12;
     drawLine($("line"),S.notes,start,S.level,true);
     const preview=S.index%12>=8&&start+12<S.notes.length;
-    $("next").hidden=!preview;
+    $("next").toggleAttribute("hidden",!preview);
     if(preview) drawLine($("next"),S.notes,start+12,S.level,false);
-  }else{drawReminder($("line"),level>=8?["sol","fa"]:[clef]);$("next").hidden=true}
+  }else{drawReminder($("line"),level>=8?["sol","fa"]:[clef]);$("next").toggleAttribute("hidden",true)}
 }
 
 /* ---------- Clavier ---------- */
@@ -315,40 +332,43 @@ function kbOctaves(lvl,c){
   clefs.forEach(k=>{const r=range(k,lvl);let a=r[0],b=r[1];if(lvl===10){if(k==="sol")b+=7;else a-=7}lo=Math.min(lo,a);hi=Math.max(hi,b)});
   return [Math.floor(lo/7),Math.floor(hi/7)];
 }
+// Vraie touche blanche : 23,5 mm × 150 mm ; ici 30 % plus étroite. Noire : 58 % de la largeur, 63,5 % de la longueur.
+const KEY_RATIO=150/(23.5*0.7);
 function buildKeys(){
   const kb=$("kb"); kb.innerHTML="";
-  let [o0,o1]=kbOctaves(level,clef);
-  // Jusqu'à 3 octaves : une octave par rangée (grandes touches). Au-delà : deux octaves par rangée.
-  const per=o1-o0+1<=3?1:2;
-  if(per===2&&(o1-o0+1)%2) o0>0?o0--:o1++;
-  const n=o1-o0+1, rows=n/per;
-  const h=rows<=1?150:rows<=2?112:rows<=3?92:84;
-  const bw=9.5/per;
-  for(let top=o1;top>=o0;top-=per){
-    const row=document.createElement("div"); row.className="oct"; row.style.height=h+"px"; if(per===2) row.style.gap="2px";
-    for(let o=top-per+1;o<=top;o++) NAMES.forEach((nm,i)=>{
-      const step=o*7+i, b=document.createElement("button");
+  const [n0,n1]=kbOctaves(level,clef);
+  const Wd=kb.clientWidth||$("line").parentElement.clientWidth||340;
+  const land=innerWidth>innerHeight, playing=document.body.classList.contains("playing");
+  const Hmax=playing&&land?Math.max(90,Math.round(innerHeight*0.44)):Math.min(170,Math.round(innerHeight*0.24));
+  // Autant d'octaves que la largeur le permet à cette hauteur, centrées sur celles du niveau
+  let want=Math.max(n1-n0+1,Math.min(8,Math.floor(Wd/(Hmax/KEY_RATIO*7))));
+  let o0=n0,o1=n1,t=0;
+  while(o1-o0+1<want&&(o0>0||o1<7)){if((t++%2===0&&o1<7)||o0<=0)o1++;else o0--}
+  const N=7*(o1-o0+1), ww=Wd/N;
+  kb.style.height=Math.round(ww*KEY_RATIO)+"px";
+  const pc=100/N, bw=pc*0.58;
+  for(let o=o0;o<=o1;o++){
+    NAMES.forEach((nm,i)=>{
+      const step=o*7+i, k=(o-o0)*7+i, b=document.createElement("button");
       b.className="w"+(step===28?" mid":""); b.dataset.step=step; b.setAttribute("aria-label",label(step));
+      b.style.left=k*pc+"%"; b.style.width=pc+"%";
       b.addEventListener("pointerdown",e=>{e.preventDefault();press(step,midiOf(step),b)});
-      row.appendChild(b);
+      kb.appendChild(b);
     });
-    for(let j=0;j<per;j++){
-      const o=top-per+1+j;
-      [[1,1],[3,2],[6,4],[8,5],[10,6]].forEach(([pc,pos])=>{
-        const midi=12+o*12+pc, b=document.createElement("button");
-        b.className="b"; b.dataset.midi=midi; b.style.width=bw+"%";
-        b.style.left=`calc(${(j*7+pos)/(7*per)*100}% - ${bw/2}%)`;
-        b.setAttribute("aria-label",PC[pc]+o);
-        b.addEventListener("pointerdown",e=>{e.preventDefault();press(null,midi,b)});
-        row.appendChild(b);
-      });
-    }
-    kb.appendChild(row);
+    [[1,1],[3,2],[6,4],[8,5],[10,6]].forEach(([p,pos])=>{
+      const midi=12+o*12+p, b=document.createElement("button");
+      b.className="b"; b.dataset.midi=midi;
+      b.style.left=(((o-o0)*7+pos)*pc-bw/2)+"%"; b.style.width=bw+"%";
+      b.setAttribute("aria-label",PC[p]+o);
+      b.addEventListener("pointerdown",e=>{e.preventDefault();press(null,midi,b)});
+      kb.appendChild(b);
+    });
   }
-  $("kbinfo").textContent=n>1?`${n} octaves · Do${o0} → Si${o1} · aigu en haut`:`Octave ${o0}`;
-  kb.classList.toggle("dense",per===2);
-  if(prefs.sound) preload(12+o0*12,23+o1*12);
+  const need=n1-n0+1;
+  $("kbinfo").textContent=`Clavier Do${o0} → Si${o1} · le niveau utilise ${need>1?need+" octaves (Do"+n0+" → Si"+n1+")":"l'octave "+n0} · point rouge = do central`;
+  if(prefs.sound) preload(12+n0*12,23+n1*12);
 }
+let rsz=null; addEventListener("resize",()=>{clearTimeout(rsz);rsz=setTimeout(buildKeys,120)});
 function clearMarks(){document.querySelectorAll(".hit-ko,.hit-ok").forEach(k=>k.classList.remove("hit-ko","hit-ok"))}
 
 /* ---------- Son : piano à queue Salamander (échantillons réels), synthèse en secours ---------- */
@@ -510,6 +530,8 @@ function renderHistory(){
 }
 function render(){
   const run=!!(S&&S.running);
+  const was=document.body.classList.contains("playing"); document.body.classList.toggle("playing",run);
+  if(was!==run) buildKeys();
   $("setup").hidden=run; $("history").hidden=run; $("abandon").hidden=!run; $("status").hidden=run;
   if(run){$("result").hidden=true}else{renderSetup();renderResult();renderHistory()}
   renderStats(); renderStaff();

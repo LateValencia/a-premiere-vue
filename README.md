@@ -15,7 +15,7 @@ Entraînement à la lecture de notes : **150 notes, 3 minutes**. Version web ins
 
 ## Clavier
 
-Le clavier n'affiche que les octaves utiles au niveau : une octave par rangée (grandes touches) jusqu'à 3 octaves, puis deux octaves par rangée. L'aigu est en haut, le do central porte une pastille.
+Un seul clavier, sur une rangée, aux proportions d'un vrai piano (touches 30 % plus étroites). La séance se joue **en mode paysage**. Le clavier montre autant d'octaves que la largeur le permet, centrées sur celles du niveau ; aucune touche ne porte de nom, seul le do central a une pastille.
 
 ## Installer sur iPhone
 
