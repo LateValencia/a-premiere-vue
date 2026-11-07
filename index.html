@@ -58,10 +58,10 @@ h1{font-family:var(--f-display);font-weight:400;font-size:24px;margin:0;letter-s
 .oct{position:relative;display:flex;gap:3px}
 .kb button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;padding:0}
 .w{flex:1;background:var(--key-white);border:1px solid var(--key-edge);border-radius:0 0 8px 8px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:6px!important;color:#5b6476;font-size:12.5px;line-height:1.1;position:relative}
-.w.mid::before{content:"";position:absolute;bottom:40px;width:7px;height:7px;border-radius:50%;background:var(--felt);opacity:.55}
+.w.mid::before{content:"";position:absolute;bottom:14px;width:7px;height:7px;border-radius:50%;background:var(--felt);opacity:.55}
 .w .o{font-size:10px;opacity:.75}
 .dense .w{border-radius:0 0 5px 5px;font-size:11px;padding-bottom:4px!important}
-.dense .w.mid::before{bottom:30px;width:6px;height:6px}
+.dense .w.mid::before{bottom:10px;width:6px;height:6px}
 .stat b{font-size:18px}
 .b{position:absolute;top:0;width:9.5%;height:58%;background:var(--key-black);border:0;border-radius:0 0 5px 5px}
 .w.hit-ok{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
@@ -151,7 +151,6 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--felt);outline-o
     <span id="kbinfo"></span>
     <span class="tgs">
       <label class="tg"><input type="checkbox" id="optSound" checked> Son</label>
-      <label class="tg"><input type="checkbox" id="optNames" checked> Noms</label>
     </span>
   </div>
 
@@ -322,8 +321,6 @@ function buildKeys(){
     for(let o=top-per+1;o<=top;o++) NAMES.forEach((nm,i)=>{
       const step=o*7+i, b=document.createElement("button");
       b.className="w"+(step===28?" mid":""); b.dataset.step=step; b.setAttribute("aria-label",label(step));
-      const full=prefs.names&&(per===1||i===0);
-      b.innerHTML=full?(i===0?`${nm}<span class="o">${o}</span>`:nm):(i===0?`<span class="o">${o}</span>`:"");
       b.addEventListener("pointerdown",e=>{e.preventDefault();press(step,midiOf(step),b)});
       row.appendChild(b);
     });
@@ -519,9 +516,8 @@ function chooseLevel(n){
 document.querySelectorAll("[data-clef]").forEach(b=>b.onclick=()=>{clef=b.dataset.clef;prefs.clef=clef;store.set("apv-prefs",prefs);chooseLevel(unlocked[clef])});
 $("start").onclick=start;
 $("abandon").onclick=()=>finish({abandon:true});
-$("optSound").checked=prefs.sound; $("optNames").checked=prefs.names;
+$("optSound").checked=prefs.sound;
 $("optSound").onchange=e=>{prefs.sound=e.target.checked;store.set("apv-prefs",prefs);if(prefs.sound)buildKeys()};
-$("optNames").onchange=e=>{prefs.names=e.target.checked;store.set("apv-prefs",prefs);buildKeys()};
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S&&S.running){tick();try{navigator.wakeLock&&navigator.wakeLock.request("screen").then(l=>wakeLock=l).catch(()=>{})}catch(e){}}});
 
 chooseLevel(level);
