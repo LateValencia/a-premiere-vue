@@ -323,19 +323,52 @@ function buildKeys(){
   }
   $("kbinfo").textContent=n>1?`${n} octaves · Do${o0} → Si${o1} · aigu en haut`:`Octave ${o0}`;
   kb.classList.toggle("dense",per===2);
+  if(prefs.sound) preload(12+o0*12,23+o1*12);
 }
 function clearMarks(){document.querySelectorAll(".hit-ko,.hit-ok").forEach(k=>k.classList.remove("hit-ko","hit-ok"))}
 
-/* ---------- Son synthétisé (même recette que l'appli Mac) ---------- */
-let ac=null;
+/* ---------- Son : piano à queue Salamander (échantillons réels), synthèse en secours ---------- */
+let ac=null, master=null;
+function ctx(){
+  if(!ac){
+    ac=new (window.AudioContext||window.webkitAudioContext)();
+    const comp=ac.createDynamicsCompressor(); comp.threshold.value=-10; comp.ratio.value=4; comp.connect(ac.destination);
+    master=ac.createGain(); master.gain.value=.9; master.connect(comp);
+  }
+  return ac;
+}
+const SB={C:0,Ds:3,Fs:6,A:9};
+const SAMPLES=["A0","C1","Ds1","Fs1","A1","C2","Ds2","Fs2","A2","C3","Ds3","Fs3","A3","C4","Ds4","Fs4","A4","C5","Ds5","Fs5","A5","C6","Ds6","Fs6","A6","C7","Ds7","Fs7","A7","C8"]
+  .map(n=>({n,m:12*(+n.slice(-1)+1)+SB[n.slice(0,-1)]}));
+const buffers={}, loading={};
+const nearest=m=>SAMPLES.reduce((a,b)=>Math.abs(b.m-m)<Math.abs(a.m-m)?b:a);
+function load(s){
+  if(buffers[s.n]||loading[s.n]) return;
+  loading[s.n]=fetch("piano/"+s.n+".mp3").then(r=>{if(!r.ok)throw 0;return r.arrayBuffer()})
+    .then(b=>new Promise((res,rej)=>ctx().decodeAudioData(b,res,rej))).then(buf=>{buffers[s.n]=buf})
+    .catch(()=>{}).finally(()=>{delete loading[s.n]});
+}
+function preload(m0,m1){try{SAMPLES.filter(s=>s.m>=m0-3&&s.m<=m1+3).forEach(load)}catch(e){}}
+let voices=[];
 function play(midi){
   if(!prefs.sound) return;
   try{
-    ac=ac||new (window.AudioContext||window.webkitAudioContext)();
-    if(ac.state!=="running") ac.resume();
+    try{if(navigator.audioSession)navigator.audioSession.type="playback"}catch(e){} // joue même en mode silencieux (iOS 17+)
+    const c=ctx(); if(c.state!=="running") c.resume();
+    const s=nearest(midi), buf=buffers[s.n];
+    if(buf){
+      const t=c.currentTime, src=c.createBufferSource(), g=c.createGain();
+      src.buffer=buf; src.playbackRate.value=Math.pow(2,(midi-s.m)/12);
+      g.gain.setValueAtTime(2.4,t); g.gain.setValueAtTime(2.4,t+2.4); g.gain.exponentialRampToValueAtTime(.001,t+3.4);
+      src.connect(g); g.connect(master); src.start(t); src.stop(t+3.5);
+      voices.push(g); if(voices.length>10){const v=voices.shift();v.gain.cancelScheduledValues(t);v.gain.setValueAtTime(v.gain.value,t);v.gain.exponentialRampToValueAtTime(.001,t+.25)}
+      return;
+    }
+    load(s);
+    const ac=c;
     const f=440*Math.pow(2,(midi-69)/12), t=ac.currentTime, g=ac.createGain();
     g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.32,t+.006); g.gain.exponentialRampToValueAtTime(.001,t+.7);
-    g.connect(ac.destination);
+    g.connect(master);
     for(let hm=1;hm<=5;hm++){
       if(f*hm>ac.sampleRate*.46) break;
       const o=ac.createOscillator(), gh=ac.createGain();
@@ -468,7 +501,7 @@ document.querySelectorAll("[data-clef]").forEach(b=>b.onclick=()=>{clef=b.datase
 $("start").onclick=start;
 $("abandon").onclick=()=>finish({abandon:true});
 $("optSound").checked=prefs.sound; $("optNames").checked=prefs.names;
-$("optSound").onchange=e=>{prefs.sound=e.target.checked;store.set("apv-prefs",prefs)};
+$("optSound").onchange=e=>{prefs.sound=e.target.checked;store.set("apv-prefs",prefs);if(prefs.sound)buildKeys()};
 $("optNames").onchange=e=>{prefs.names=e.target.checked;store.set("apv-prefs",prefs);buildKeys()};
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S&&S.running){tick();try{navigator.wakeLock&&navigator.wakeLock.request("screen").then(l=>wakeLock=l).catch(()=>{})}catch(e){}}});
 

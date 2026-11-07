@@ -20,3 +20,7 @@ Le clavier n'affiche que les octaves utiles au niveau : une octave par rangée (
 ## Installer sur iPhone
 
 Ouvrir l'adresse GitHub Pages dans Safari, puis Partager → « Sur l'écran d'accueil ». Tout fonctionne en local : la progression et les 200 dernières séances restent sur l'appareil. Le son passe par le haut-parleur (désactiver le mode silencieux si besoin).
+
+## Son
+
+Le clavier joue de vrais échantillons de piano à queue : **Salamander Grand Piano** d'Alexander Holm (licence [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/)), dans la version MP3 diffusée par [Tone.js](https://github.com/Tonejs/audio). Un échantillon toutes les trois demi-tons, du La0 au Do8 ; les notes intermédiaires sont transposées. Seules les octaves du niveau choisi sont chargées. Sur iPhone (iOS 17 et plus), le son passe même en mode silencieux.
