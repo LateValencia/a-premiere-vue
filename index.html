@@ -118,10 +118,12 @@ body.playing .stats{grid-template-columns:repeat(4,minmax(0,1fr)) auto}
   body.playing header,body.playing .kbbar{display:none}
   body.playing .stat{padding:3px 9px;display:flex;align-items:baseline;gap:8px}
   body.playing .stat b{font-size:17px}
-  body.playing .staff{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:minmax(0,1fr) auto;padding:4px}
+  body.playing .staff{flex:1;min-height:0;display:grid;grid-template-columns:1fr 2fr 1fr;grid-template-rows:minmax(0,1fr) auto;padding:4px}
+  body.playing .staff #line{grid-column:2;grid-row:1}
+  body.playing .staff #next{grid-column:3;grid-row:1;align-self:center;height:auto}
   body.playing .staff svg{width:100%;height:100%}
   body.playing .staff svg.next{border-top:0;border-left:1px dashed var(--line)}
-  body.playing .feedback{grid-column:1/3;padding:0 8px 2px;min-height:20px;font-size:13.5px}
+  body.playing .feedback{grid-column:1/4;grid-row:2;padding:0 8px 2px;min-height:20px;font-size:13.5px}
 }
 button:focus-visible,input:focus-visible{outline:2px solid var(--felt);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -193,13 +195,14 @@ const midiOf=s=>12+Math.floor(s/7)*12+OFF[s%7];
 const TITLES=["Premiers repères","Élargissement","Toute la portée","Autour de la portée","Lignes supplémentaires","Registre élargi","Trois lignes maximum","Deux portées","Changements de clé","Octaves 8va / 8vb"];
 const RANGES={sol:[[28,32],[28,35],[28,38],[28,40],[26,40],[26,42],[24,44]],fa:[[16,20],[16,24],[16,28],[16,28],[16,30],[14,30],[12,32]]};
 const range=(clef,level)=>RANGES[clef][Math.max(0,Math.min(6,level-1))];
+const KB_LO=7, KB_HI=49; // clavier 73 touches : Do1 → Do7
 const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 function generate(level,clef,count){
   const out=[];
   for(let i=0;i<count;i++){
     const wc=level<8?clef:(Math.floor(i/4)%2===0?clef:other(clef));
     const shift=level===10&&Math.floor(i/4)%3!==0?(wc==="sol"?1:-1):0;
-    const r=range(wc,level), written=rnd(r[0],r[1]);
+    const r=range(wc,level), written=rnd(Math.max(r[0],KB_LO-shift*7),Math.min(r[1],KB_HI-shift*7));
     out.push({step:written+shift*7,clef:wc,shift,written});
   }
   return out;
@@ -326,47 +329,49 @@ function renderStaff(){
 }
 
 /* ---------- Clavier ---------- */
-function kbOctaves(lvl,c){
+function kbSteps(lvl,c){
   const clefs=lvl<8?[c]:["sol","fa"];
   let lo=99,hi=0;
   clefs.forEach(k=>{const r=range(k,lvl);let a=r[0],b=r[1];if(lvl===10){if(k==="sol")b+=7;else a-=7}lo=Math.min(lo,a);hi=Math.max(hi,b)});
-  return [Math.floor(lo/7),Math.floor(hi/7)];
+  return [Math.max(KB_LO,lo),Math.min(KB_HI,hi)];
 }
-// Vraie touche blanche : 23,5 mm × 150 mm ; ici 30 % plus étroite. Noire : 58 % de la largeur, 63,5 % de la longueur.
-const KEY_RATIO=150/(23.5*0.7);
+// Proportions d'une vraie touche blanche : 23,5 mm × 150 mm. Noire : 58 % de la largeur, 63,5 % de la longueur.
+const KEY_RATIO=150/23.5, SHARP=[1,1,0,1,1,1,0]; // Do Ré _ Fa Sol La _ ont un dièse
 function buildKeys(){
   const kb=$("kb"); kb.innerHTML="";
-  const [n0,n1]=kbOctaves(level,clef);
+  const [n0,n1]=kbSteps(level,clef), need=n1-n0+1, all=KB_HI-KB_LO+1;
   const Wd=kb.clientWidth||$("line").parentElement.clientWidth||340;
   const land=innerWidth>innerHeight, playing=document.body.classList.contains("playing");
-  const Hmax=playing&&land?Math.max(90,Math.round(innerHeight*0.44)):Math.min(170,Math.round(innerHeight*0.24));
-  // Autant d'octaves que la largeur le permet à cette hauteur, centrées sur celles du niveau
-  let want=Math.max(n1-n0+1,Math.min(8,Math.floor(Wd/(Hmax/KEY_RATIO*7))));
-  let o0=n0,o1=n1,t=0;
-  while(o1-o0+1<want&&(o0>0||o1<7)){if((t++%2===0&&o1<7)||o0<=0)o1++;else o0--}
-  const N=7*(o1-o0+1), ww=Wd/N;
-  kb.style.height=Math.round(ww*KEY_RATIO)+"px";
-  const pc=100/N, bw=pc*0.58;
-  for(let o=o0;o<=o1;o++){
-    NAMES.forEach((nm,i)=>{
-      const step=o*7+i, k=(o-o0)*7+i, b=document.createElement("button");
-      b.className="w"+(step===28?" mid":""); b.dataset.step=step; b.setAttribute("aria-label",label(step));
-      b.style.left=k*pc+"%"; b.style.width=pc+"%";
-      b.addEventListener("pointerdown",e=>{e.preventDefault();press(step,midiOf(step),b)});
-      kb.appendChild(b);
-    });
-    [[1,1],[3,2],[6,4],[8,5],[10,6]].forEach(([p,pos])=>{
-      const midi=12+o*12+p, b=document.createElement("button");
-      b.className="b"; b.dataset.midi=midi;
-      b.style.left=(((o-o0)*7+pos)*pc-bw/2)+"%"; b.style.width=bw+"%";
-      b.setAttribute("aria-label",PC[p]+o);
-      b.addEventListener("pointerdown",e=>{e.preventDefault();press(null,midi,b)});
-      kb.appendChild(b);
-    });
+  let n, center;
+  if(playing&&land){n=all;center=28}            // séance en paysage : les 73 touches, do central au milieu
+  else{
+    const Hmax=Math.min(150,Math.round(innerHeight*0.22));
+    n=Math.min(all,Math.max(need,Math.floor(Wd/(Hmax/KEY_RATIO))));
+    center=level>=8?28:clef==="sol"?34:22;        // milieu de la portée : Si4 en sol, Ré3 en fa
   }
-  const need=n1-n0+1;
-  $("kbinfo").textContent=`Clavier Do${o0} → Si${o1} · le niveau utilise ${need>1?need+" octaves (Do"+n0+" → Si"+n1+")":"l'octave "+n0} · point rouge = do central`;
-  if(prefs.sound) preload(12+n0*12,23+n1*12);
+  let a=Math.round(center-(n-1)/2);
+  a=Math.min(a,n0); a=Math.max(a,n1-n+1); a=Math.max(KB_LO,Math.min(a,KB_HI-n+1));
+  const ww=Wd/n, pc=100/n, bw=pc*0.58;
+  kb.style.height=Math.round(ww*KEY_RATIO)+"px";
+  for(let k=0;k<n;k++){
+    const step=a+k, b=document.createElement("button");
+    b.className="w"+(step===28?" mid":""); b.dataset.step=step; b.setAttribute("aria-label",label(step));
+    b.style.left=k*pc+"%"; b.style.width=pc+"%";
+    b.addEventListener("pointerdown",e=>{e.preventDefault();press(step,midiOf(step),b)});
+    kb.appendChild(b);
+  }
+  for(let k=0;k<n-1;k++){
+    const step=a+k; if(!SHARP[step%7]) continue;
+    const midi=midiOf(step)+1, b=document.createElement("button");
+    b.className="b"; b.dataset.midi=midi;
+    b.style.left=((k+1)*pc-bw/2)+"%"; b.style.width=bw+"%";
+    b.setAttribute("aria-label",PC[(midi-12)%12]+Math.floor((midi-12)/12));
+    b.addEventListener("pointerdown",e=>{e.preventDefault();press(null,midi,b)});
+    kb.appendChild(b);
+  }
+  const keys=n+[...Array(n-1).keys()].filter(k=>SHARP[(a+k)%7]).length;
+  $("kbinfo").textContent=`${keys} touches · ${label(a)} → ${label(a+n-1)} · notes du niveau : ${label(n0)} → ${label(n1)} · point rouge = do central`;
+  if(prefs.sound) preload(midiOf(n0),midiOf(n1)+1);
 }
 let rsz=null; addEventListener("resize",()=>{clearTimeout(rsz);rsz=setTimeout(buildKeys,120)});
 function clearMarks(){document.querySelectorAll(".hit-ko,.hit-ok").forEach(k=>k.classList.remove("hit-ko","hit-ok"))}
