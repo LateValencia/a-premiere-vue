@@ -15,7 +15,7 @@ Entraînement à la lecture de notes : **150 notes, 3 minutes**. Version web ins
 
 ## Clavier
 
-Un seul clavier, sur une rangée, aux proportions d'une vraie touche de piano (23,5 × 150 mm), 10 % plus large : **la tessiture du niveau plus 5 touches blanches de chaque côté**, dans la limite de 73 touches (Do1 → Do7). La séance se joue **en mode paysage**, le clavier centré sous la portée. Aucune touche ne porte de nom ; seul le do central a une pastille.
+Un seul clavier, sur une rangée, aux proportions d'une vraie touche de piano (23,5 × 150 mm), 21 % plus large : **la tessiture du niveau plus 5 touches blanches de chaque côté**, dans la limite de 73 touches (Do1 → Do7). La séance se joue **en mode paysage**, le clavier centré sous la portée. Aucune touche ne porte de nom ; seul le do central a une pastille.
 
 ## Installer sur iPhone
 

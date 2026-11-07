@@ -335,8 +335,8 @@ function kbSteps(lvl,c){
   clefs.forEach(k=>{const r=range(k,lvl);let a=r[0],b=r[1];if(lvl===10){if(k==="sol")b+=7;else a-=7}lo=Math.min(lo,a);hi=Math.max(hi,b)});
   return [Math.max(KB_LO,lo),Math.min(KB_HI,hi)];
 }
-// Vraie touche blanche : 23,5 mm × 150 mm, ici 10 % plus large. Noire : 58 % de la largeur, 63,5 % de la longueur.
-const KEY_RATIO=150/(23.5*1.1), SHARP=[1,1,0,1,1,1,0]; // Do Ré _ Fa Sol La _ ont un dièse
+// Vraie touche blanche : 23,5 mm × 150 mm, ici 21 % plus large (2 × 10 %). Noire : 58 % de la largeur, 63,5 % de la longueur.
+const KEY_RATIO=150/(23.5*1.21), SHARP=[1,1,0,1,1,1,0]; // Do Ré _ Fa Sol La _ ont un dièse
 function buildKeys(){
   const kb=$("kb"); kb.innerHTML="";
   const [n0,n1]=kbSteps(level,clef);
