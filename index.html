@@ -340,11 +340,13 @@ const KEY_RATIO=150/(23.5*1.21), SHARP=[1,1,0,1,1,1,0]; // Do Ré _ Fa Sol La _ 
 function buildKeys(){
   const kb=$("kb"); kb.innerHTML="";
   const [n0,n1]=kbSteps(level,clef);
-  // Tessiture du niveau + 5 touches blanches de chaque côté, dans les 73 touches (Do1 → Do7)
-  const a=Math.max(KB_LO,n0-5), n=Math.min(KB_HI,n1+5)-a+1;
   const land=innerWidth>innerHeight, playing=document.body.classList.contains("playing");
   const Hmax=playing&&land?Math.max(90,Math.round(innerHeight*0.44)):Math.min(170,Math.round(innerHeight*0.24));
   kb.style.width=""; const Wfull=kb.clientWidth||$("line").parentElement.clientWidth||340;
+  // Tessiture du niveau + 5 touches blanches de chaque côté ; si l'écran est trop étroit, la marge descend jusqu'à 2
+  // pour garder des touches larges. Toujours dans les 73 touches (Do1 → Do7).
+  let m=5; while(m>2&&Wfull/(n1-n0+1+2*m)<Hmax/KEY_RATIO) m--;
+  const a=Math.max(KB_LO,n0-m), n=Math.min(KB_HI,n1+m)-a+1;
   // Vraies proportions : si le clavier serait trop haut, on le rétrécit (centré) plutôt que de déformer les touches
   const ww=Math.min(Wfull/n,Hmax/KEY_RATIO);
   kb.style.width=Math.round(ww*n)+"px";
