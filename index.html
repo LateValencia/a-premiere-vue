@@ -335,8 +335,8 @@ function kbSteps(lvl,c){
   clefs.forEach(k=>{const r=range(k,lvl);let a=r[0],b=r[1];if(lvl===10){if(k==="sol")b+=7;else a-=7}lo=Math.min(lo,a);hi=Math.max(hi,b)});
   return [Math.max(KB_LO,lo),Math.min(KB_HI,hi)];
 }
-// Proportions d'une vraie touche blanche : 23,5 mm × 150 mm. Noire : 58 % de la largeur, 63,5 % de la longueur.
-const KEY_RATIO=150/23.5, SHARP=[1,1,0,1,1,1,0]; // Do Ré _ Fa Sol La _ ont un dièse
+// Vraie touche blanche : 23,5 mm × 150 mm, ici 10 % plus large. Noire : 58 % de la largeur, 63,5 % de la longueur.
+const KEY_RATIO=150/(23.5*1.1), SHARP=[1,1,0,1,1,1,0]; // Do Ré _ Fa Sol La _ ont un dièse
 function buildKeys(){
   const kb=$("kb"); kb.innerHTML="";
   const [n0,n1]=kbSteps(level,clef);
@@ -405,15 +405,17 @@ function play(midi){
     if(buf){
       const t=c.currentTime, src=c.createBufferSource(), g=c.createGain();
       src.buffer=buf; src.playbackRate.value=Math.pow(2,(midi-s.m)/12);
-      g.gain.setValueAtTime(2.4,t); g.gain.setValueAtTime(2.4,t+2.4); g.gain.exponentialRampToValueAtTime(.001,t+3.4);
-      src.connect(g); g.connect(master); src.start(t); src.stop(t+3.5);
-      voices.push(g); if(voices.length>10){const v=voices.shift();v.gain.cancelScheduledValues(t);v.gain.setValueAtTime(v.gain.value,t);v.gain.exponentialRampToValueAtTime(.001,t+.25)}
+      // Son court, comme un doigt qu'on relève : tenue 0,45 s puis étouffement ; la note précédente est étouffée aussitôt
+      voices.forEach(v=>{v.gain.cancelScheduledValues(t);v.gain.setValueAtTime(v.gain.value,t);v.gain.exponentialRampToValueAtTime(.001,t+.12)}); voices.length=0;
+      g.gain.setValueAtTime(2.4,t); g.gain.setValueAtTime(2.4,t+.45); g.gain.exponentialRampToValueAtTime(.001,t+1.1);
+      src.connect(g); g.connect(master); src.start(t); src.stop(t+1.15);
+      voices.push(g);
       return;
     }
     load(s);
     const ac=c;
     const f=440*Math.pow(2,(midi-69)/12), t=ac.currentTime, g=ac.createGain();
-    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.32,t+.006); g.gain.exponentialRampToValueAtTime(.001,t+.7);
+    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.32,t+.006); g.gain.exponentialRampToValueAtTime(.001,t+.5);
     g.connect(master);
     for(let hm=1;hm<=5;hm++){
       if(f*hm>ac.sampleRate*.46) break;
