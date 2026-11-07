@@ -272,14 +272,33 @@ function drawLine(svg,notes,start,lvl,active){
   }
   svg.innerHTML=`<g stroke="var(--ink-soft)" stroke-width="1">${lines}</g><g fill="var(--ink)">${glyphs}</g><g stroke="var(--ink)" stroke-width="1">${fg}</g>`;
 }
+/* Rappel avant la séance : chaque ligne et interligne de la portée, avec sa lettre (lignes en encre, interlignes en rouge) */
+const LETTERS=["C","D","E","F","G","A","B"];
+function drawReminder(svg,clefs){
+  const blockH=146; let out="", y0=0;
+  clefs.forEach(c=>{
+    const bot=y0+88, b=CLEFS[c].bottom;
+    out+=`<g stroke="var(--ink-soft)" stroke-width="1">${staffLines(bot)}</g><g fill="var(--ink)">${clefGlyph(c,8,bot)}</g>`;
+    for(let p=0;p<9;p++){
+      const step=b+p, x=66+p*33, y=bot-p*HS, col=p%2===0?"var(--ink)":"var(--felt)";
+      out+=`<ellipse cx="${x}" cy="${y}" rx="6.4" ry="4.6" transform="rotate(-22 ${x} ${y})" fill="${col}"/>`;
+      out+=`<text x="${x}" y="${bot+24}" text-anchor="middle" font-size="16" font-weight="600" fill="${col}">${LETTERS[step%7]}</text>`;
+      out+=`<text x="${x}" y="${bot+39}" text-anchor="middle" font-size="10" fill="var(--ink-soft)">${NAMES[step%7]}</text>`;
+    }
+    const lines=[0,2,4,6,8].map(p=>LETTERS[(b+p)%7]).join(" "), spaces=[1,3,5,7].map(p=>LETTERS[(b+p)%7]).join(" ");
+    out+=`<text x="6" y="${y0+16}" font-size="12" fill="var(--ink-soft)">${CLEFS[c].name} · lignes <tspan fill="var(--ink)" font-weight="600">${lines}</tspan> · interlignes <tspan fill="var(--felt)" font-weight="600">${spaces}</tspan></text>`;
+    y0+=blockH;
+  });
+  svg.setAttribute("viewBox",`0 0 ${W} ${y0-6}`); svg.innerHTML=out;
+}
 function renderStaff(){
-  if(S&&(S.running||S.finished)){
+  if(S&&S.running){
     const start=Math.floor(Math.min(S.index,TOTAL-1)/12)*12;
     drawLine($("line"),S.notes,start,S.level,true);
-    const preview=S.running&&S.index%12>=8&&start+12<S.notes.length;
+    const preview=S.index%12>=8&&start+12<S.notes.length;
     $("next").hidden=!preview;
     if(preview) drawLine($("next"),S.notes,start+12,S.level,false);
-  }else{drawLine($("line"),sample,0,level,false);$("next").hidden=true}
+  }else{drawReminder($("line"),level>=8?["sol","fa"]:[clef]);$("next").hidden=true}
 }
 
 /* ---------- Clavier ---------- */
@@ -493,7 +512,7 @@ function render(){
 }
 function chooseLevel(n){
   level=n; S=null; sample=generate(level,clef,12); clearMarks();
-  fb("idle",`Niveau ${n} · ${TITLES[n-1]}`); buildKeys(); render();
+  fb("idle","Rappel : C = Do · D = Ré · E = Mi · F = Fa · G = Sol · A = La · B = Si"); buildKeys(); render();
 }
 
 /* ---------- Événements ---------- */
