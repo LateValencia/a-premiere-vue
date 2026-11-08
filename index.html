@@ -151,7 +151,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--felt);outline-o
     <div class="levels" id="levels" role="group" aria-label="Niveau"></div>
     <p class="lvinfo" id="lvinfo"></p>
     <button class="go" id="start">Commencer</button>
-    <p class="muted">+1 par note juste à la bonne octave · −1 par erreur · 130 points valident le niveau (il passe en vert). Tous les niveaux restent ouverts.</p>
+    <p class="muted">+1 par note juste à la bonne octave · −1 maximum par note à trouver · 130 points valident le niveau (il passe en vert). Tous les niveaux restent ouverts.</p>
   </section>
 
   <section class="result" id="result" hidden></section>
@@ -441,14 +441,15 @@ function press(step,midi,el){
   clearMarks();
   const n=S.notes[S.index];
   if(step===n.step){
-    S.score++;S.index++;S.streak++;S.best=Math.max(S.best,S.streak);
+    S.score++;S.index++;S.notePenalized=false;S.streak++;S.best=Math.max(S.best,S.streak);
     el.classList.add("hit-ok"); setTimeout(()=>el.classList.remove("hit-ok"),160);
     fb("ok",S.streak%10===0?`${S.streak} notes sans erreur !`:"Juste ! Continue.");
     if(S.index===S.notes.length){finish();return}
   }else{
-    S.score--;S.errors++;S.streak=0;
+    if(!S.notePenalized){S.score--;S.errors++;S.notePenalized=true}
+    S.streak=0;
     el.classList.add("hit-ko");
-    fb("ko","Essaie encore : la note et son octave doivent correspondre.");
+    fb("ko","Essaie encore : cette note ne te coûtera pas de point supplémentaire.");
   }
   if(S.score+(TOTAL-S.index)<GOAL){finish({unreachable:true});return}
   renderStats(); renderStaff();
@@ -458,7 +459,7 @@ function fb(c,t){const e=$("fb");e.className="feedback "+c;e.textContent=t}
 let wakeLock=null;
 function start(){
   const prev=history.filter(h=>h.clef===clef&&h.niveau===level&&!h.abandon).map(h=>h.score);
-  S={running:true,finished:false,level,clef,notes:generate(level,clef,TOTAL),index:0,score:0,errors:0,streak:0,best:0,
+  S={running:true,finished:false,level,clef,notes:generate(level,clef,TOTAL),index:0,score:0,errors:0,notePenalized:false,streak:0,best:0,
      deadline:Date.now()+DURATION*1000,record:prev.length?Math.max(...prev):null};
   clearMarks(); fb("idle","Joue la note surlignée, à la bonne octave.");
   try{navigator.wakeLock&&navigator.wakeLock.request("screen").then(l=>wakeLock=l).catch(()=>{})}catch(e){}
@@ -521,7 +522,7 @@ function renderResult(){
   if(!S||!S.finished){R.hidden=true;return}
   R.hidden=false;
   let h=`<div class="row"><div class="big">${S.score} points</div>${S.passed?`<div class="stars">${"★".repeat(stars(S.score))}</div>`:""}</div>`;
-  h+=`<p class="muted">${S.index} notes trouvées − ${S.errors} erreurs = ${S.score} points · meilleure série : ${S.best}</p>`;
+  h+=`<p class="muted">${S.index} notes trouvées − ${S.errors} pénalités = ${S.score} points · meilleure série : ${S.best}</p>`;
   if(S.record!==null&&S.score>S.record&&!S.abandon) h+=`<p class="okt" style="margin:0">Nouveau record du niveau ! (ancien : ${S.record})</p>`;
   if(S.unreachable) h+=`<p class="muted">Séance écourtée : même sans autre erreur, les 130 points n'étaient plus accessibles.</p>`;
   if(!S.passed&&S.score<GOAL&&!S.abandon) h+=`<p class="muted">Il manque ${GOAL-S.score} point${GOAL-S.score>1?"s":""} pour réussir ce niveau.</p>`;
@@ -545,7 +546,7 @@ function renderHistory(){
   else{
     h+=`<div class="hist">`+recent.map(r=>{
       const st=r.abandon?"Interrompue":r.motif==="objectif-inaccessible"?"Objectif inaccessible":r.score>=GOAL?"Réussie "+"★".repeat(stars(r.score)):"À poursuivre";
-      return `<div><div class="t">Niveau ${r.niveau} · ${r.score} points<em class="${!r.abandon&&r.score>=GOAL?"win":""}">${st}</em></div><small>${r.notes} trouvées − ${r.erreurs} erreurs · ${fmt.format(new Date(r.date*1000))}</small></div>`}).join("")+`</div>`;
+      return `<div><div class="t">Niveau ${r.niveau} · ${r.score} points<em class="${!r.abandon&&r.score>=GOAL?"win":""}">${st}</em></div><small>${r.notes} trouvées − ${r.erreurs} pénalités · ${fmt.format(new Date(r.date*1000))}</small></div>`}).join("")+`</div>`;
   }
   h+=`<p class="muted">Les 200 dernières séances restent sur cet appareil (rien n'est envoyé).</p>`;
   $("history").innerHTML=h;
