@@ -64,6 +64,10 @@ body.playing .pace{display:block}
 .w{bottom:0;background:var(--key-white);border:1px solid var(--key-edge);border-radius:0 0 4px 4px}
 .w.mid::after{content:"";position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:min(6px,55%);aspect-ratio:1;border-radius:50%;background:var(--felt);opacity:.6}
 .b{z-index:2;height:63.5%;background:var(--key-black);border:0;border-radius:0 0 3px 3px}
+.w.heard{filter:brightness(.74)}
+.b.heard{background:#484c58;box-shadow:inset 0 0 0 1px #707584}
+.micbar{display:flex;align-items:center;gap:10px;flex-shrink:0;font-size:12px;color:var(--ink-soft)}
+.micbar .btn[aria-pressed="true"]{color:var(--ok);border-color:var(--ok);background:var(--ok-soft)}
 .w.hit-ok{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
 .w.hit-ko,.b.hit-ko{background:var(--felt-soft);border:1px solid var(--felt)}
 .w:active{background:var(--line)}
@@ -183,6 +187,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--felt);outline-o
     </span>
   </div>
 
+  <div class="micbar"><button class="btn" id="micToggle" aria-pressed="false">Écouter le piano</button><span id="micStatus" role="status">Micro désactivé · une note à la fois</span></div>
   <section id="history"></section>
 </div>
 
@@ -360,7 +365,7 @@ function buildKeys(){
   kb.style.height=Math.round(ww*KEY_RATIO)+"px";
   for(let k=0;k<n;k++){
     const step=a+k, b=document.createElement("button");
-    b.className="w"+(step===28?" mid":""); b.dataset.step=step; b.setAttribute("aria-label",label(step));
+    b.className="w"+(step===28?" mid":""); b.dataset.step=step; b.dataset.midi=midiOf(step); b.setAttribute("aria-label",label(step));
     b.style.left=k*pc+"%"; b.style.width=pc+"%";
     b.addEventListener("pointerdown",e=>{e.preventDefault();press(step,midiOf(step),b)});
     kb.appendChild(b);
@@ -433,9 +438,76 @@ function play(midi){
   }catch(e){}
 }
 
+/* ---------- Écoute du piano : détection monophonique locale (YIN) ---------- */
+let micStream=null, micContext=null, micSource=null, micAnalyser=null, micFrame=0, micBusy=false;
+let micIgnoreUntil=0, micLastMidi=null, micLastAt=0, micCandidate=null, micStable=0, micQuiet=0, micEnvelope=0, heardKey=null, heardUntil=0;
+function detectPitch(input,sampleRate){
+  // Réduire à environ 24 kHz pour limiter le calcul sur téléphone.
+  const stride=Math.max(1,Math.floor(sampleRate/24000)), rate=sampleRate/stride;
+  const size=Math.floor(input.length/stride), data=new Float32Array(size);
+  let energy=0;
+  for(let i=0;i<size;i++){let v=0;for(let j=0;j<stride;j++)v+=input[i*stride+j];v/=stride;data[i]=v;energy+=v*v}
+  const rms=Math.sqrt(energy/size);if(rms<.003)return {midi:null,rms};
+  const maxTau=Math.min(Math.floor(rate/31),Math.floor(size/2)), minTau=Math.max(2,Math.floor(rate/2200));
+  const diff=new Float32Array(maxTau+1), window=size-maxTau;let sum=0, found=0;
+  for(let tau=1;tau<=maxTau;tau++){
+    let d=0;for(let i=0;i<window;i++){const v=data[i]-data[i+tau];d+=v*v}
+    sum+=d;diff[tau]=sum?d*tau/sum:1;
+    if(tau>minTau&&diff[tau-1]<.14&&diff[tau]>=diff[tau-1]){found=tau-1;break}
+  }
+  if(!found)return {midi:null,rms};
+  const left=diff[found-1], mid=diff[found], right=diff[found+1], den=left-2*mid+right;
+  const period=found+(den?(left-right)/(2*den):0), pitch=69+12*Math.log2(rate/period/440), midi=Math.round(pitch);
+  return {midi:Math.abs(pitch-midi)<.38&&midi>=24&&midi<=96?midi:null,rms};
+}
+function stopMic(message="Micro désactivé · une note à la fois"){
+  cancelAnimationFrame(micFrame);micFrame=0;
+  if(micStream)micStream.getTracks().forEach(t=>t.stop());micStream=null;
+  if(micSource)micSource.disconnect();micSource=null;micAnalyser=null;
+  if(micContext)micContext.close().catch(()=>{});micContext=null;
+  if(heardKey)heardKey.classList.remove("heard");heardKey=null;
+  $("micToggle").setAttribute("aria-pressed","false");$("micToggle").textContent="Écouter le piano";$("micStatus").textContent=message;
+}
+async function toggleMic(){
+  if(micBusy)return;if(micStream){stopMic();return}micBusy=true;
+  $("micToggle").disabled=true;$("micStatus").textContent="Autorise le micro pour écouter le piano…";
+  try{
+    if(!navigator.mediaDevices?.getUserMedia)throw new Error("unsupported");
+    micContext=new (window.AudioContext||window.webkitAudioContext)();await micContext.resume();
+    micStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+    micSource=micContext.createMediaStreamSource(micStream);micAnalyser=micContext.createAnalyser();micAnalyser.fftSize=8192;micSource.connect(micAnalyser);
+    micLastMidi=null;micCandidate=null;micStable=0;micQuiet=0;micEnvelope=0;micLastAt=0;
+    $("micToggle").setAttribute("aria-pressed","true");$("micToggle").textContent="Couper le micro";$("micStatus").textContent="À l’écoute · joue une seule note à la fois";
+    const samples=new Float32Array(micAnalyser.fftSize);let lastScan=0;
+    function listen(now){
+      if(!micStream)return;micFrame=requestAnimationFrame(listen);
+      if(heardKey&&now>heardUntil){heardKey.classList.remove("heard");heardKey=null}
+      if(now-lastScan<55||now<micIgnoreUntil)return;lastScan=now;
+      micAnalyser.getFloatTimeDomainData(samples);const {midi,rms}=detectPitch(samples,micContext.sampleRate);
+      const attack=rms>Math.max(.008,micEnvelope*1.8);micEnvelope=micEnvelope*.75+rms*.25;
+      if(midi===null){micStable=0;micCandidate=null;if(++micQuiet>=3)micLastMidi=null;return}
+      micQuiet=0;
+      if(midi===micCandidate)micStable++;else{micCandidate=midi;micStable=1}
+      if(attack&&now-micLastAt>240)micLastMidi=null;
+      if(micStable<2||midi===micLastMidi||now-micLastAt<160)return;
+      micLastMidi=midi;micLastAt=now;
+      const key=document.querySelector(`#kb button[data-midi="${midi}"]`);
+      const note=PC[midi%12]+(Math.floor(midi/12)-1);
+      $("micStatus").textContent=key?`À l’écoute · ${note} reconnu`:`À l’écoute · ${note} hors du clavier de cet exercice`;
+      if(!key)return;
+      if(S&&S.running)press(key.dataset.step===undefined?null:Number(key.dataset.step),midi,key,true);
+      if(heardKey)heardKey.classList.remove("heard");heardKey=key;key.classList.add("heard");heardUntil=now+350;
+    }
+    micFrame=requestAnimationFrame(listen);
+  }catch(e){stopMic(e.name==="NotAllowedError"?"Micro refusé : autorise-le dans les réglages de Safari.":"Micro indisponible : vérifie son autorisation puis réessaie.")}
+  finally{micBusy=false;$("micToggle").disabled=false}
+}
+$("micToggle").onclick=toggleMic;
+addEventListener("pagehide",()=>stopMic());
+
 /* ---------- Jeu ---------- */
-function press(step,midi,el){
-  play(midi);
+function press(step,midi,el,fromMic=false){
+  if(!fromMic){play(midi);if(prefs.sound)micIgnoreUntil=performance.now()+1250}
   if(!S||!S.running){clearMarks();el.classList.add(step!==null?"hit-ok":"hit-ko");setTimeout(()=>el.classList.remove("hit-ok","hit-ko"),180);return}
   if(Date.now()>=S.deadline){finish();return}
   clearMarks();

@@ -24,3 +24,7 @@ Ouvrir l'adresse GitHub Pages dans Safari, puis Partager → « Sur l'écran d'a
 ## Son
 
 Le clavier joue de vrais échantillons de piano à queue : **Salamander Grand Piano** d'Alexander Holm (licence [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/)), dans la version MP3 diffusée par [Tone.js](https://github.com/Tonejs/audio). Un échantillon toutes les trois demi-tons, du La0 au Do8 ; les notes intermédiaires sont transposées. Seules les octaves du niveau choisi sont chargées. Sur iPhone (iOS 17 et plus), le son passe même en mode silencieux.
+
+## Jouer avec un vrai piano
+
+Activer « Écouter le piano » et autoriser le micro. Une note à la fois : la touche reconnue s’assombrit brièvement, même hors séance. Pendant la séance, les notes reconnues répondent à l’exercice. L’analyse reste sur l’appareil, sans enregistrement ni envoi de son. La reconnaissance dépend du micro et du bruit ambiant ; les accords ne sont pas pris en charge.
