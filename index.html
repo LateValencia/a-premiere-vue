@@ -46,8 +46,13 @@ h1{font-family:var(--f-display);font-weight:400;font-size:24px;margin:0;letter-s
 .stat span{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stat b{font-weight:600;font-size:19px;font-variant-numeric:tabular-nums}
 .stat b.low{color:var(--felt)}
-.meter{height:4px;background:var(--line);border-radius:2px;overflow:hidden}
-.meter i{display:block;height:100%;width:0;background:var(--felt);transition:width .15s}
+.pace{display:none;flex-shrink:0}
+body.playing .pace{display:block}
+.meter{height:9px;background:var(--line);border-radius:5px;position:relative;overflow:hidden}
+.meter i{display:block;height:100%;width:0;background:var(--ok);transition:width .15s,background .15s}
+.meter .time-marker{position:absolute;top:0;bottom:0;width:2px;background:var(--ink);transform:translateX(-1px)}
+.pace-label{font-size:11px;line-height:1.3;display:flex;justify-content:space-between;margin-top:2px;color:var(--ink-soft)}
+#paceStatus{font-weight:600}
 .staff{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:6px 4px 2px}
 .staff svg{display:block;width:100%;height:auto}
 .staff svg.next{opacity:.5;border-top:1px dashed var(--line)}
@@ -158,7 +163,10 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--felt);outline-o
     <div class="stat"><span>Série</span><b id="sStreak">0</b></div>
     <button class="btn danger" id="abandon" hidden>Abandonner</button>
   </div>
-  <div class="meter"><i id="bar"></i></div>
+  <div class="pace">
+    <div class="meter" id="paceMeter" role="progressbar" aria-label="Notes trouvées par rapport au temps écoulé" aria-valuemin="0" aria-valuemax="150" aria-valuenow="0"><i id="bar"></i><span class="time-marker" id="timeMarker" aria-hidden="true"></span></div>
+    <div class="pace-label"><span id="paceStatus">Dans le rythme</span><span>Repère noir : temps écoulé · objectif 150 notes / 3 min</span></div>
+  </div>
 
   <div class="staff">
     <svg id="line" role="img" aria-label="Ligne de notes à lire"></svg>
@@ -482,6 +490,16 @@ function renderStats(){
   $("sNotes").textContent=`${Math.min(idx,TOTAL)}/${TOTAL}`;
   $("sStreak").textContent=S?S.streak:0;
   $("bar").style.width=(idx/TOTAL*100)+"%";
+  const elapsed=S?Math.max(0,Math.min(DURATION,DURATION-(S.deadline-Date.now())/1000)):0;
+  const lead=idx*DURATION/TOTAL-elapsed;
+  const ahead=lead>=0, delta=Math.round(Math.abs(lead));
+  const paceText=delta===0?"Dans le rythme":`${ahead?"Avance":"Retard"} : ${delta} s`;
+  $("bar").style.background=ahead?"var(--ok)":"var(--felt)";
+  $("timeMarker").style.left=(elapsed/DURATION*100)+"%";
+  $("paceStatus").textContent=paceText;
+  $("paceStatus").style.color=ahead?"var(--ok)":"var(--felt)";
+  $("paceMeter").setAttribute("aria-valuenow",Math.min(idx,TOTAL));
+  $("paceMeter").setAttribute("aria-valuetext",`${idx} notes sur ${TOTAL}. ${paceText}`);
 }
 function renderSetup(){
   document.querySelectorAll("[data-clef]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.clef===clef));
