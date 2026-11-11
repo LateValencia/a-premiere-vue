@@ -15,6 +15,18 @@ Entraînement à la lecture de notes : **150 notes, 3 minutes**. Version web ins
 
 Cinq niveaux, dont la tessiture s'élargit : en clé de sol de Do4–Sol4 jusqu'à La3–La5, en clé de fa de Mi2–Si2 jusqu'à Mi2–Mi4 (avec lignes supplémentaires).
 
+### Partitions bonus
+
+Chaque niveau réussi débloque une **partition bonus** : une vraie chanson du domaine public, écrite uniquement avec les notes du niveau (mêmes touches que l'exercice), avec ses durées, ses mesures et ses ligatures. Pas de chrono ; à la fin, l'appli rejoue la mélodie. Points : score × bonus du niveau, plus 50 points (× bonus) si la partition est jouée sans faute.
+
+| Niveau | Clé de sol | Clé de fa |
+|---|---|---|
+| 1 | Ode à la joie (Beethoven) | Au clair de la lune |
+| 2 | Ah ! vous dirai-je, maman | Ode à la joie |
+| 3 | Frère Jacques | Frère Jacques |
+| 4 | Joyeux anniversaire | Ah ! vous dirai-je, maman |
+| 5 | Douce nuit (Gruber) | Joyeux anniversaire |
+
 ## Clavier
 
 Un seul clavier, sur une rangée, aux proportions d'une vraie touche de piano (23,5 × 150 mm), 21 % plus large : **seulement les touches de l'exercice**, de la note la plus grave à la plus aiguë du niveau, dans la limite de 73 touches (Do1 → Do7). La séance se joue **en mode paysage**, le clavier centré sous la portée. Aucune touche ne porte de nom ; seul le do central a une pastille.

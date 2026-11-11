@@ -142,6 +142,10 @@ body.playing .stats{grid-template-columns:repeat(4,minmax(0,1fr)) auto}
   body.playing .pace-label{order:-1;margin:0;white-space:nowrap}
   body.playing .pace-label span+span{display:none}
 }
+body.bonus .pace{display:none!important}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btns .go{flex:1}
+.go.song{background:var(--ok);color:var(--paper)}
 button:focus-visible,input:focus-visible{outline:2px solid var(--felt);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -163,6 +167,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--felt);outline-o
     <div class="levels" id="levels" role="group" aria-label="Niveau"></div>
     <p class="lvinfo" id="lvinfo"></p>
     <button class="go" id="start">Commencer</button>
+    <button class="go song" id="bonusBtn" hidden></button>
     <p class="muted">+1 par note juste à la bonne octave · −1 maximum par note à trouver · 100 points valident le niveau (il passe en vert). Chaque niveau rapporte 25 % de points en plus, même sans le réussir. Le chrono démarre à ta première note.</p>
   </section>
 
@@ -330,6 +335,96 @@ function drawLine(svg,notes,start,lvl,active){
 }
 /* Rappel avant la séance : chaque ligne et interligne de la portée, avec sa lettre (lignes en encre, interlignes en rouge) */
 const LETTERS=["C","D","E","F","G","A","B"];
+/* ---------- Partitions bonus : une vraie chanson (domaine public) par niveau, dans la tessiture du niveau ----------
+   Notation : Note+octave+durée (e croche, q noire, q. noire pointée, h blanche, h. blanche pointée, w ronde), « | » = barre de mesure. */
+const DUR={e:.5,q:1,"q.":1.5,h:2,"h.":3,w:4};
+const shiftOct=(m,k)=>m.replace(/([A-G])(\d)/g,(_,l,o)=>l+(+o+k));
+const SONGS={sol:{
+  1:{title:"Ode à la joie",by:"Beethoven",meter:4,bpm:100,m:"E4q E4q F4q G4q|G4q F4q E4q D4q|C4q C4q D4q E4q|E4q. D4e D4h|E4q E4q F4q G4q|G4q F4q E4q D4q|C4q C4q D4q E4q|D4q. C4e C4h"},
+  2:{title:"Ah ! vous dirai-je, maman",by:"Air traditionnel",meter:4,bpm:100,m:"C4q C4q G4q G4q|A4q A4q G4h|F4q F4q E4q E4q|D4q D4q C4h|G4q G4q F4q F4q|E4q E4q D4h|G4q G4q F4q F4q|E4q E4q D4h|C4q C4q G4q G4q|A4q A4q G4h|F4q F4q E4q E4q|D4q D4q C4h"},
+  3:{title:"Frère Jacques",by:"Chanson traditionnelle",meter:4,bpm:104,m:"G4q A4q B4q G4q|G4q A4q B4q G4q|B4q C5q D5h|B4q C5q D5h|D5e E5e D5e C5e B4q G4q|D5e E5e D5e C5e B4q G4q|G4q D4q G4h|G4q D4q G4h"},
+  4:{title:"Joyeux anniversaire",by:"Mildred et Patty Hill",meter:3,bpm:96,m:"G4e G4e|A4q G4q C5q|B4h G4e G4e|A4q G4q D5q|C5h G4e G4e|G5q E5q C5q|B4q A4q F5e F5e|E5q C5q D5q|C5h."},
+  5:{title:"Douce nuit",by:"Franz Gruber",meter:3,bpm:84,m:"G4q. A4e G4q|E4h.|G4q. A4e G4q|E4h.|D5h D5q|B4h.|C5h C5q|G4h.|A4h A4q|C5q. B4e A4q|G4q. A4e G4q|E4h.|A4h A4q|C5q. B4e A4q|G4q. A4e G4q|E4h.|D5h D5q|F5q. D5e B4q|C5h.|E5h.|C5q. G4e E4q|G4q. F4e D4q|C4h."}
+},fa:{
+  1:{title:"Au clair de la lune",by:"Chanson traditionnelle",meter:4,bpm:100,m:"G2q G2q G2q A2q|B2h A2h|G2q B2q A2q A2q|G2w|G2q G2q G2q A2q|B2h A2h|G2q B2q A2q A2q|G2w"},
+  2:{title:"Ode à la joie",by:"Beethoven",meter:4,bpm:100,m:"B2q B2q C3q D3q|D3q C3q B2q A2q|G2q G2q A2q B2q|B2q. A2e A2h|B2q B2q C3q D3q|D3q C3q B2q A2q|G2q G2q A2q B2q|A2q. G2e G2h"},
+  3:{title:"Frère Jacques",by:"Chanson traditionnelle",meter:4,bpm:104,m:"C3q D3q E3q C3q|C3q D3q E3q C3q|E3q F3q G3h|E3q F3q G3h|G3e A3e G3e F3e E3q C3q|G3e A3e G3e F3e E3q C3q|C3q G2q C3h|C3q G2q C3h"}
+}};
+SONGS.fa[4]={...SONGS.sol[2],m:shiftOct(SONGS.sol[2].m,-1)};
+SONGS.fa[5]={...SONGS.sol[4],m:shiftOct(SONGS.sol[4].m,-2)};
+// Espacement des notes : pas proportionnel à la durée, sinon les croches se chevauchent
+const SPACE=d=>Math.max(.9,Math.sqrt(d)*1.2);
+function songFor(c,n){
+  const sg=SONGS[c][n]; if(sg.notes) return sg;
+  sg.clef=c; sg.level=n; sg.notes=[]; sg.bars=[];
+  sg.m.split("|").forEach(bs=>{
+    const b={n0:sg.notes.length,beats:0,w:.45};
+    bs.trim().split(/\s+/).forEach(t=>{
+      const m=/^([A-G])(\d)(q\.|h\.|[eqhw])$/.exec(t); if(!m) throw new Error("Note illisible : "+t);
+      const d=DUR[m[3]], step=LETTERS.indexOf(m[1])+7*+m[2];
+      sg.notes.push({step,written:step,clef:c,shift:0,dur:d,beat:b.beats,bar:sg.bars.length,wx:b.w});
+      b.beats+=d; b.w+=SPACE(d);
+    });
+    b.w+=.15; b.n1=sg.notes.length; sg.bars.push(b);
+  });
+  sg.notes.forEach((x,i)=>{const y=sg.notes[i+1];
+    if(x.dur===.5&&y&&y.dur===.5&&y.bar===x.bar&&Math.floor(x.beat)===Math.floor(y.beat)){x.beamTo=i+1;y.beamFrom=i}});
+  const per=sg.meter===4?3:4; sg.lines=[];
+  for(let i=0;i<sg.bars.length;i+=per){
+    const bs=sg.bars.slice(i,i+per);
+    sg.lines.push({b0:i,b1:i+bs.length,n0:bs[0].n0,n1:bs[bs.length-1].n1,w:bs.reduce((t,b)=>t+b.w,0)});
+  }
+  sg.lo=Math.min(...sg.notes.map(x=>x.step)); sg.hi=Math.max(...sg.notes.map(x=>x.step));
+  return sg;
+}
+const lineOfNote=(sg,i)=>Math.max(0,sg.lines.findIndex(l=>i>=l.n0&&i<l.n1));
+function drawSong(svg,sg,li,act,doneTo){
+  const bot=112, b0=CLEFS[sg.clef].bottom, line=sg.lines[li];
+  const top=bot-Math.max(8,sg.hi-b0)*HS-34, bottom=bot-Math.min(0,sg.lo-b0)*HS+34;
+  svg.setAttribute("viewBox",`0 ${top} ${W} ${bottom-top}`);
+  let glyphs=clefGlyph(sg.clef,8,bot), fg="", lead=36;
+  if(li===0){
+    glyphs+=`<g font-family="Georgia,serif" font-weight="700" font-size="22" text-anchor="middle"><text x="${lead+7}" y="${bot-2*GAP-1}">${sg.meter}</text><text x="${lead+7}" y="${bot-1}">4</text></g>`;
+    lead+=20;
+  }
+  const avail=W-6-lead, scale=Math.min(avail/line.w,(W-62)/sg.lines[0].w);
+  // Positions d'abord (pour les ligatures), dessin ensuite
+  const pos={}; let px=lead;
+  for(let bi=line.b0;bi<line.b1;bi++){const bar=sg.bars[bi];for(let i=bar.n0;i<bar.n1;i++){const rel=sg.notes[i].step-b0;pos[i]={x:px+(sg.notes[i].wx+.3)*scale,rel,y:bot-rel*HS}}px+=bar.w*scale}
+  const stemOf=i=>{const n=sg.notes[i],a=n.beamFrom!==undefined?n.beamFrom:i,b=n.beamTo!==undefined?n.beamTo:i;
+    if(a===b) return {down:pos[i].rel>=4,end:null};
+    const down=(pos[a].rel+pos[b].rel)/2>=4;
+    return {down,end:down?Math.max(pos[a].y,pos[b].y)+28:Math.min(pos[a].y,pos[b].y)-28,a,b}};
+  let bx=lead;
+  for(let bi=line.b0;bi<line.b1;bi++){
+    const bar=sg.bars[bi], bw=bar.w*scale;
+    for(let i=bar.n0;i<bar.n1;i++){
+      const n=sg.notes[i], {x,rel,y}=pos[i], st=stemOf(i);
+      const isActive=i===act, done=i<doneTo;
+      if(isActive) glyphs+=`<rect x="${x-11}" y="${Math.min(bot-4*GAP,y)-26}" width="22" height="${Math.max(bot,y)-Math.min(bot-4*GAP,y)+52}" rx="8" fill="var(--felt-soft)"/>`;
+      let led="";
+      if(rel<0) for(let l=-2;l>=rel;l-=2) led+=`<line x1="${x-10}" x2="${x+10}" y1="${bot-l*HS}" y2="${bot-l*HS}"/>`;
+      if(rel>8) for(let l=10;l<=rel;l+=2) led+=`<line x1="${x-10}" x2="${x+10}" y1="${bot-l*HS}" y2="${bot-l*HS}"/>`;
+      const col=isActive?"var(--felt)":done?"var(--ink-soft)":"var(--ink)", op=done?.45:1;
+      const down=st.down, sx=down?x-5.6:x+5.6, sy=st.end!==null?st.end:y+(down?28:-28), hollow=n.dur>=2;
+      let g=led;
+      if(n.dur<4) g+=`<line x1="${sx}" x2="${sx}" y1="${y}" y2="${sy}" stroke="${col}" stroke-width="1.3"/>`;
+      if(n.beamTo!==undefined){const x2=pos[n.beamTo].x+(down?-5.6:5.6);g+=`<line x1="${sx}" x2="${x2}" y1="${sy}" y2="${sy}" stroke="${col}" stroke-width="4.2"/>`}
+      if(n.dur===.5&&st.end===null) g+=down?`<path d="M${sx} ${sy} c1 -5 8 -7 6 -14" fill="none" stroke="${col}" stroke-width="1.6"/>`
+                            :`<path d="M${sx} ${sy} c1 5 8 7 6 14" fill="none" stroke="${col}" stroke-width="1.6"/>`;
+      g+=hollow?`<ellipse cx="${x}" cy="${y}" rx="${n.dur>=4?7:6.2}" ry="4.4" transform="rotate(-22 ${x} ${y})" fill="var(--card)" stroke="${col}" stroke-width="1.7"/>`
+               :`<ellipse cx="${x}" cy="${y}" rx="6.4" ry="4.6" transform="rotate(-22 ${x} ${y})" fill="${col}" stroke="none"/>`;
+      if(n.dur===1.5||n.dur===3) g+=`<circle cx="${x+10}" cy="${rel%2===0?y-HS+1:y}" r="1.8" fill="${col}" stroke="none"/>`;
+      fg+=`<g opacity="${op}">${g}</g>`;
+    }
+    bx+=bw;
+    const last=bi===sg.bars.length-1;
+    fg+=last?`<line x1="${bx-4}" x2="${bx-4}" y1="${bot}" y2="${bot-4*GAP}"/><line x1="${bx}" x2="${bx}" y1="${bot}" y2="${bot-4*GAP}" stroke-width="3.2"/>`
+            :`<line x1="${bx}" x2="${bx}" y1="${bot}" y2="${bot-4*GAP}"/>`;
+  }
+  let lines="";for(let i=0;i<5;i++)lines+=`<line x1="4" x2="${li===sg.lines.length-1?bx:W-4}" y1="${bot-i*GAP}" y2="${bot-i*GAP}"/>`;
+  svg.innerHTML=`<g stroke="var(--ink-soft)" stroke-width="1">${lines}</g><g fill="var(--ink)">${glyphs}</g><g stroke="var(--ink)" stroke-width="1">${fg}</g>`;
+}
 function drawReminder(svg,clefs){
   const blockH=146; let out="", y0=0;
   clefs.forEach(c=>{
@@ -348,6 +443,14 @@ function drawReminder(svg,clefs){
   svg.setAttribute("viewBox",`0 0 ${W} ${y0-6}`); svg.innerHTML=out;
 }
 function renderStaff(){
+  if(S&&S.bonus&&(S.running||S.playIdx!==null)){
+    const idx=S.running?S.index:S.playIdx, li=lineOfNote(S.song,idx);
+    drawSong($("line"),S.song,li,idx,S.running?S.index:-1);
+    const hasNext=li+1<S.song.lines.length;
+    $("next").toggleAttribute("hidden",!hasNext);
+    if(hasNext) drawSong($("next"),S.song,li+1,-1,-1);
+    return;
+  }
   if(S&&S.running){
     const start=Math.floor(Math.min(S.index,TOTAL-1)/12)*12;
     drawLine($("line"),S.notes,start,S.level,true);
@@ -434,7 +537,7 @@ function load(s){
 }
 function preload(m0,m1){try{SAMPLES.filter(s=>s.m>=m0-3&&s.m<=m1+3).forEach(load)}catch(e){}}
 let voices=[];
-function play(midi){
+function play(midi,hold=.45){
   if(!prefs.sound) return;
   try{
     try{if(navigator.audioSession)navigator.audioSession.type="playback"}catch(e){} // joue même en mode silencieux (iOS 17+)
@@ -445,8 +548,8 @@ function play(midi){
       src.buffer=buf; src.playbackRate.value=Math.pow(2,(midi-s.m)/12);
       // Son court, comme un doigt qu'on relève : tenue 0,45 s puis étouffement ; la note précédente est étouffée aussitôt
       voices.forEach(v=>{v.gain.cancelScheduledValues(t);v.gain.setValueAtTime(v.gain.value,t);v.gain.exponentialRampToValueAtTime(.001,t+.12)}); voices.length=0;
-      g.gain.setValueAtTime(2.4,t); g.gain.setValueAtTime(2.4,t+.45); g.gain.exponentialRampToValueAtTime(.001,t+1.1);
-      src.connect(g); g.connect(master); src.start(t); src.stop(t+1.15);
+      g.gain.setValueAtTime(2.4,t); g.gain.setValueAtTime(2.4,t+hold); g.gain.exponentialRampToValueAtTime(.001,t+hold+.65);
+      src.connect(g); g.connect(master); src.start(t); src.stop(t+hold+.7);
       voices.push(g);
       return;
     }
@@ -534,6 +637,7 @@ addEventListener("pagehide",()=>stopMic());
 function press(step,midi,el,fromMic=false){
   if(!fromMic){play(midi);if(prefs.sound)micIgnoreUntil=performance.now()+1250}
   if(!S||!S.running){clearMarks();el.classList.add(step!==null?"hit-ok":"hit-ko");setTimeout(()=>el.classList.remove("hit-ok","hit-ko"),180);return}
+  if(S.bonus){pressBonus(step,el);return}
   if(S.deadline===null) S.deadline=Date.now()+DURATION*1000; // le chrono démarre à la première note jouée
   if(Date.now()>=S.deadline){finish();return}
   clearMarks();
@@ -552,10 +656,27 @@ function press(step,midi,el,fromMic=false){
   if(S.score+(TOTAL-S.index)<GOAL){finish({unreachable:true});return}
   renderStats(); renderStaff();
 }
+function pressBonus(step,el){
+  if(!S.startedAt) S.startedAt=Date.now();
+  clearMarks();
+  const n=S.notes[S.index];
+  if(step===n.step){
+    S.score++;S.index++;S.notePenalized=false;S.streak++;S.best=Math.max(S.best,S.streak);
+    el.classList.add("hit-ok"); setTimeout(()=>el.classList.remove("hit-ok"),160);
+    if(S.index===S.notes.length){finishBonus();return}
+    fb("ok",S.streak%10===0?`${S.streak} notes sans erreur !`:"Juste !");
+  }else{
+    if(!S.notePenalized){S.score--;S.errors++;S.notePenalized=true}
+    S.streak=0; el.classList.add("hit-ko");
+    fb("ko","Pas tout à fait : cherche encore cette note.");
+  }
+  renderStats(); renderStaff();
+}
 function fb(c,t){const e=$("fb");e.className="feedback "+c;e.textContent=t}
 
 let wakeLock=null;
 function start(){
+  clearTimeout(pbTimer);
   const prev=history.filter(h=>h.clef===clef&&h.niveau===level&&!h.abandon).map(h=>h.score);
   S={running:true,finished:false,level,clef,notes:generate(level,clef,TOTAL),index:0,score:0,errors:0,notePenalized:false,streak:0,best:0,
      deadline:null,record:prev.length?Math.max(...prev):null};
@@ -564,8 +685,50 @@ function start(){
   clearInterval(timer); timer=setInterval(tick,200);
   render(); window.scrollTo({top:0});
 }
+let bonusRec=store.get("apv-bonus",{}), pbTimer=0;
+const CLEAN_BONUS=50;
+function startBonus(){
+  clearTimeout(pbTimer);
+  const sg=songFor(clef,level);
+  S={bonus:true,running:true,finished:false,level,clef,song:sg,notes:sg.notes,index:0,score:0,errors:0,notePenalized:false,streak:0,best:0,
+     startedAt:null,endedAt:null,deadline:null,playIdx:null};
+  clearMarks(); fb("idle",`♪ ${sg.title} · pas de chrono : joue chaque note surlignée.`);
+  try{navigator.wakeLock&&navigator.wakeLock.request("screen").then(l=>wakeLock=l).catch(()=>{})}catch(e){}
+  clearInterval(timer); timer=setInterval(tick,500);
+  render(); window.scrollTo({top:0});
+}
+function finishBonus(o={}){
+  if(!S||!S.running) return;
+  clearInterval(timer); try{wakeLock&&wakeLock.release()}catch(e){} wakeLock=null;
+  S.running=false;S.finished=true;S.abandon=!!o.abandon;S.endedAt=Date.now();
+  S.clean=!S.abandon&&S.errors===0;
+  S.points=S.abandon?0:pointsOf(Math.max(0,S.score)+(S.clean?CLEAN_BONUS:0),S.level);
+  totalPts+=S.points; store.set("apv-points",totalPts);
+  if(!S.abandon){
+    const k=S.clef+"-"+S.level, r=bonusRec[k]||{fois:0,sansFaute:false,meilleur:-1e9};
+    bonusRec[k]={fois:r.fois+1,sansFaute:r.sansFaute||S.clean,meilleur:Math.max(r.meilleur,S.score)};
+    store.set("apv-bonus",bonusRec);
+  }
+  fb(S.abandon?"idle":"ok",S.abandon?"Partition interrompue.":S.clean?"Sans faute ! Écoute ce que tu viens de lire.":"Partition terminée ! Écoute ce que tu viens de lire.");
+  clearMarks(); render();
+  if(!S.abandon) pbTimer=setTimeout(playSong,600);
+}
+function playSong(){
+  clearTimeout(pbTimer);
+  if(!S||!S.bonus||S.running) return;
+  const spb=60/S.song.bpm; let i=0;
+  const stepf=()=>{
+    if(!S||!S.bonus||S.running) return;
+    if(i>=S.notes.length){S.playIdx=null;renderStaff();return}
+    const n=S.notes[i]; S.playIdx=i;
+    play(midiOf(n.step),Math.min(1.8,n.dur*spb*.9)); renderStaff();
+    i++; pbTimer=setTimeout(stepf,n.dur*spb*1000);
+  };
+  stepf();
+}
 function tick(){if(!S||!S.running)return;if(S.deadline!==null&&Date.now()>=S.deadline){finish();return}renderStats()}
 function finish(o={}){
+  if(S&&S.bonus){finishBonus(o);return}
   if(!S||!S.running) return;
   clearInterval(timer); try{wakeLock&&wakeLock.release()}catch(e){} wakeLock=null;
   S.running=false;S.finished=true;S.abandon=!!o.abandon;S.unreachable=!!o.unreachable;
@@ -582,6 +745,14 @@ function finish(o={}){
 
 /* ---------- Affichage ---------- */
 function renderStats(){
+  if(S&&S.bonus){
+    const el=S.startedAt?Math.floor(((S.endedAt||Date.now())-S.startedAt)/1000):0, N=S.notes.length;
+    $("sScore").textContent=S.score;
+    $("sTime").textContent=`${Math.floor(el/60)}:${String(el%60).padStart(2,"0")}`; $("sTime").classList.remove("low");
+    $("sNotes").textContent=`${Math.min(S.index,N)}/${N}`;
+    $("sStreak").textContent=S.streak;
+    return;
+  }
   const sc=S?S.score:0, idx=S?S.index:0;
   const rem=S&&S.deadline!==null?Math.max(0,Math.ceil((S.deadline-Date.now())/1000)):DURATION;
   $("sScore").textContent=sc;
@@ -615,23 +786,40 @@ function renderSetup(){
   }
   const r=range(clef,level);
   $("lvinfo").innerHTML=`<b>Niveau ${level} · ${TITLES[level-1]}</b><br><span class="muted">${level>=8?"Les deux clés, ":""}${level<8?label(r[0])+" → "+label(r[1]):""}${level>=8?"notes jusqu'à trois lignes supplémentaires":""} · ${won[clef].has(level)?"réussi ✓":"pas encore réussi"} · ${nWon()} niveau${nWon()>1?"x":""} réussi${nWon()>1?"s":""} sur ${LEVELS}<br>Bonus de points : <b>${multTxt(level)}</b></span>`;
-  $("start").textContent=S&&S.finished?"Nouvelle séance":"Commencer";
+  $("start").textContent=S&&S.finished&&!S.bonus?"Nouvelle séance":"Commencer";
+  const sg=SONGS[clef][level], rec=bonusRec[clef+"-"+level], open=won[clef].has(level);
+  $("bonusBtn").hidden=!open||!sg;
+  if(sg) $("bonusBtn").textContent=`♪ Partition bonus : ${sg.title}${rec&&rec.sansFaute?" ✓":""}`;
+  if(sg&&!open) $("lvinfo").insertAdjacentHTML("beforeend",`<br><span class="muted">♪ Réussis ce niveau pour débloquer sa partition bonus (une vraie chanson).</span>`);
   $("status").innerHTML=`<b>${fmtN(totalPts)}</b> points<br>150 notes · 3 min`;
 }
 function renderResult(){
   const R=$("result");
   if(!S||!S.finished){R.hidden=true;return}
   R.hidden=false;
+  if(S.bonus){
+    const N=S.notes.length, el=Math.max(0,Math.round((S.endedAt-(S.startedAt||S.endedAt))/1000));
+    let h=`<div class="row"><div class="big">♪ ${S.song.title}</div>${S.clean?`<div class="stars">★★★</div>`:""}</div>`;
+    h+=`<p class="muted">${S.song.by} · ${S.index}/${N} notes · ${S.errors} erreur${S.errors>1?"s":""} · ${Math.floor(el/60)} min ${String(el%60).padStart(2,"0")} s</p>`;
+    if(!S.abandon) h+=`<p class="okt" style="margin:0">+${fmtN(S.points)} points gagnés (${Math.max(0,S.score)}${S.clean?` + ${CLEAN_BONUS} sans faute`:""} ${multTxt(S.level)}) · total ${fmtN(totalPts)}</p>`;
+    h+=`<div class="btns">${S.abandon?"":`<button class="go alt" id="replaySong">Réécouter la mélodie</button>`}<button class="go song" id="againSong">Rejouer la partition</button></div>`;
+    R.innerHTML=h;
+    if($("replaySong")) $("replaySong").onclick=playSong;
+    $("againSong").onclick=startBonus;
+    return;
+  }
   let h=`<div class="row"><div class="big">${S.score} points</div>${S.passed?`<div class="stars">${"★".repeat(stars(S.score))}</div>`:""}</div>`;
   h+=`<p class="muted">${S.index} notes trouvées − ${S.errors} pénalités = ${S.score} points · meilleure série : ${S.best}</p>`;
   h+=`<p class="okt" style="margin:0">+${fmtN(S.points)} points gagnés (${Math.max(0,S.score)} ${multTxt(S.level)} au niveau ${S.level}) · total ${fmtN(totalPts)}</p>`;
   if(S.record!==null&&S.score>S.record&&!S.abandon) h+=`<p class="okt" style="margin:0">Nouveau record du niveau ! (ancien : ${S.record})</p>`;
   if(S.unreachable) h+=`<p class="muted">Séance écourtée : même sans autre erreur, les 100 points n'étaient plus accessibles.</p>`;
   if(!S.passed&&S.score<GOAL&&!S.abandon) h+=`<p class="muted">Il manque ${GOAL-S.score} point${GOAL-S.score>1?"s":""} pour réussir ce niveau.</p>`;
+  if(S.passed&&SONGS[S.clef][S.level]) h+=`<button class="go song" id="bonusNow">♪ Partition bonus débloquée : ${SONGS[S.clef][S.level].title}</button>`;
   if(S.passed&&S.level<LEVELS) h+=`<button class="go alt" id="nextLevel">Passer au niveau ${S.level+1}</button>`;
   else if(S.passed) h+=`<p class="okt" style="margin:0">Dernier niveau réussi !</p>`;
   R.innerHTML=h;
   const nb=$("nextLevel"); if(nb) nb.onclick=()=>{chooseLevel(S.level+1);start()};
+  const bn=$("bonusNow"); if(bn) bn.onclick=startBonus;
 }
 function renderHistory(){
   const all=history.filter(h=>h.clef===clef), done=all.filter(h=>!h.abandon);
@@ -656,7 +844,7 @@ function renderHistory(){
 }
 function render(){
   const run=!!(S&&S.running);
-  const was=document.body.classList.contains("playing"); document.body.classList.toggle("playing",run);
+  const was=document.body.classList.contains("playing"); document.body.classList.toggle("playing",run); document.body.classList.toggle("bonus",run&&!!S.bonus);
   if(was!==run) buildKeys();
   const mb=document.querySelector(".micbar"); if(run) $("abandon").before(mb); else $("history").before(mb);
   $("setup").hidden=run; $("history").hidden=run; $("abandon").hidden=!run; $("status").hidden=run;
@@ -664,13 +852,14 @@ function render(){
   renderStats(); renderStaff();
 }
 function chooseLevel(n){
-  level=n; S=null; sample=generate(level,clef,12); clearMarks();
+  clearTimeout(pbTimer); level=n; S=null; sample=generate(level,clef,12); clearMarks();
   fb("idle","Rappel : C = Do · D = Ré · E = Mi · F = Fa · G = Sol · A = La · B = Si"); buildKeys(); render();
 }
 
 /* ---------- Événements ---------- */
 document.querySelectorAll("[data-clef]").forEach(b=>b.onclick=()=>{clef=b.dataset.clef;prefs.clef=clef;store.set("apv-prefs",prefs);chooseLevel(Math.min(LEVELS,unlocked[clef]))});
 $("start").onclick=start;
+$("bonusBtn").onclick=startBonus;
 $("abandon").onclick=()=>finish({abandon:true});
 $("optSound").checked=prefs.sound;
 $("optSound").onchange=e=>{prefs.sound=e.target.checked;store.set("apv-prefs",prefs);if(prefs.sound)buildKeys()};
@@ -678,6 +867,8 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S&&S.runn
 
 chooseLevel(level);
 window.__apv=()=>S; // inspection pour les tests
+window.__apvSongs=()=>["sol","fa"].flatMap(c=>[1,2,3,4,5].map(n=>{const g=songFor(c,n),r=range(c,n);return {c,n,t:g.title,lo:g.lo,hi:g.hi,ok:g.lo>=r[0]&&g.hi<=r[1],bars:g.bars.map(b=>b.beats).join(",")}}));
+window.__apvWin=()=>{won[clef].add(level);render()};
 })();
 </script>
 </body>
