@@ -58,12 +58,13 @@ body.playing .pace{display:block}
 .staff svg.next{opacity:.5;border-top:1px dashed var(--line)}
 .feedback{min-height:24px;text-align:center;font-weight:500;font-size:14.5px;padding:2px 8px 8px}
 .feedback.ok{color:var(--ok)} .feedback.ko{color:var(--felt)} .feedback.idle{color:var(--ink-soft)}
-/* Clavier : une seule rangée, proportions d'un vrai piano (touches 30 % plus étroites) */
-.kb{position:relative;width:100%;margin:0 auto;user-select:none;-webkit-user-select:none;touch-action:none}
+/* Clavier sur une rangée ; les touches noires coupées aux extrémités restent visibles. */
+.kb{position:relative;width:100%;margin:0 auto;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none}
 .kb button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;padding:0;position:absolute;top:0}
 .w{bottom:0;background:var(--key-white);border:1px solid var(--key-edge);border-radius:0 0 4px 4px}
 .w.mid::after{content:"";position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:min(6px,55%);aspect-ratio:1;border-radius:50%;background:var(--felt);opacity:.6}
 .b{z-index:2;height:63.5%;background:var(--key-black);border:0;border-radius:0 0 3px 3px}
+.kb .edge-key{position:absolute;top:0;pointer-events:none}
 .w.heard{filter:brightness(.74)}
 .b.heard{background:#484c58;box-shadow:inset 0 0 0 1px #707584}
 .micbar{display:flex;align-items:center;gap:10px;flex-shrink:0;font-size:12px;color:var(--ink-soft)}
@@ -378,6 +379,15 @@ function buildKeys(){
     b.setAttribute("aria-label",PC[(midi-12)%12]+Math.floor((midi-12)/12));
     b.addEventListener("pointerdown",e=>{e.preventDefault();press(null,midi,b)});
     kb.appendChild(b);
+  }
+  // Repères visuels : moitié droite de la noire précédente, moitié gauche de la noire suivante.
+  // Décoratives : ces notes hors exercice ne deviennent pas des touches jouables.
+  for(const k of [-1,n-1]){
+    const step=a+k; if(!SHARP[((step%7)+7)%7]) continue;
+    const edge=document.createElement("span"); edge.className="b edge-key";
+    edge.setAttribute("aria-hidden","true");
+    edge.style.left=((k+1)*pc-bw/2)+"%"; edge.style.width=bw+"%";
+    kb.appendChild(edge);
   }
   const keys=n+[...Array(n-1).keys()].filter(k=>SHARP[(a+k)%7]).length;
   $("kbinfo").textContent=`${keys} touches · ${label(a)} → ${label(a+n-1)} · notes du niveau : ${label(n0)} → ${label(n1)} · point rouge = do central`;
