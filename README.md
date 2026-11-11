@@ -6,12 +6,14 @@ Entraînement à la lecture de notes : **150 notes, 3 minutes**. Version web ins
 
 - +1 par note juste **à la bonne octave**, −1 maximum par note à trouver, quel que soit le nombre d’essais ; la note reste active tant qu'elle n'est pas trouvée.
 - 100 points valident le niveau, qui passe en vert ; tous les niveaux restent accessibles (★ dès 100, ★★ dès 140, ★★★ à 150).
+- **Le chrono de 3 minutes ne démarre qu'à la première note jouée.**
 - La séance s'arrête dès que les 100 points ne sont plus atteignables.
+- **Points bonifiés** : chaque niveau rapporte 25 % de plus que le précédent (×1 ; ×1,25 ; ×1,56 ; ×1,95 ; ×2,44). Les points de chaque séance s'ajoutent à un total, même quand le niveau n'est pas réussi.
 - Douze notes par ligne (3 mesures de 4 noires) ; la ligne suivante apparaît pendant la dernière mesure.
 
 ## Niveaux (par clé)
 
-1 à 7 : tessiture qui s'élargit (clé de sol à partir de Do4–Sol4, clé de fa à partir de Mi2–Si2), jusqu'à trois lignes supplémentaires. 8 : deux portées. 9 : changements de clé. 10 : octaves 8va / 8vb.
+Cinq niveaux, dont la tessiture s'élargit : en clé de sol de Do4–Sol4 jusqu'à La3–La5, en clé de fa de Mi2–Si2 jusqu'à Mi2–Mi4 (avec lignes supplémentaires).
 
 ## Clavier
 

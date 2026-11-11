@@ -120,7 +120,7 @@ body.playing .stats{grid-template-columns:repeat(4,minmax(0,1fr)) auto}
   body.playing .staff,body.playing #kb,body.playing .kbbar{display:none}
   body.playing #rotate{display:block}
   body.playing .stats{grid-template-columns:repeat(4,minmax(0,1fr))}
-  body.playing .stats .btn{grid-column:1/-1}
+  body.playing .stats .btn,body.playing .stats .micbar{grid-column:1/-1}
 }
 @media (orientation:landscape){
   body.playing{padding-top:max(6px,env(safe-area-inset-top,0px));padding-bottom:max(8px,env(safe-area-inset-bottom,0px))}
@@ -128,12 +128,19 @@ body.playing .stats{grid-template-columns:repeat(4,minmax(0,1fr)) auto}
   body.playing header,body.playing .kbbar{display:none}
   body.playing .stat{padding:3px 9px;display:flex;align-items:baseline;gap:8px}
   body.playing .stat b{font-size:17px}
-  body.playing .staff{flex:1;min-height:0;display:grid;grid-template-columns:1fr 2fr 1fr;grid-template-rows:minmax(0,1fr) auto;padding:4px}
+  body.playing .staff{flex:1;min-height:0;display:grid;grid-template-columns:1fr 2fr 1fr;grid-template-rows:minmax(0,1fr);padding:4px}
   body.playing .staff #line{grid-column:2;grid-row:1}
   body.playing .staff #next{grid-column:3;grid-row:1;align-self:center;height:auto}
   body.playing .staff svg{width:100%;height:100%}
   body.playing .staff svg.next{border-top:0;border-left:1px dashed var(--line)}
-  body.playing .feedback{grid-column:1/4;grid-row:2;padding:0 8px 2px;min-height:20px;font-size:13.5px}
+  body.playing .feedback{grid-column:1;grid-row:1;align-self:center;text-align:left;padding:0 10px;min-height:0;font-size:13px;line-height:1.35}
+  /* Plus de place pour la portée : micro dans la rangée des scores, rythme sur une seule ligne */
+  body.playing .stats{grid-template-columns:repeat(4,minmax(0,1fr)) auto auto}
+  body.playing .stats .micbar #micStatus{display:none}
+  body.playing .pace{display:flex;align-items:center;gap:8px}
+  body.playing .pace .meter{flex:1;height:7px}
+  body.playing .pace-label{order:-1;margin:0;white-space:nowrap}
+  body.playing .pace-label span+span{display:none}
 }
 button:focus-visible,input:focus-visible{outline:2px solid var(--felt);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -143,7 +150,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--felt);outline-o
 <div class="wrap">
   <header>
     <div><h1>À première vue</h1><div class="felt"></div></div>
-    <div class="status" id="status">150 notes · 3 minutes</div>
+    <div class="status" id="status"></div>
   </header>
 
   <section id="setup">
@@ -156,7 +163,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--felt);outline-o
     <div class="levels" id="levels" role="group" aria-label="Niveau"></div>
     <p class="lvinfo" id="lvinfo"></p>
     <button class="go" id="start">Commencer</button>
-    <p class="muted">+1 par note juste à la bonne octave · −1 maximum par note à trouver · 100 points valident le niveau (il passe en vert). Tous les niveaux restent ouverts.</p>
+    <p class="muted">+1 par note juste à la bonne octave · −1 maximum par note à trouver · 100 points valident le niveau (il passe en vert). Chaque niveau rapporte 25 % de points en plus, même sans le réussir. Le chrono démarre à ta première note.</p>
   </section>
 
   <section class="result" id="result" hidden></section>
@@ -198,7 +205,11 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--felt);outline-o
 const GCLEF="M314 801Q300 854 291.0 906.0Q282 958 282 1012Q282 1059 288.5 1100.5Q295 1142 307 1177Q320 1217 341.0 1252.5Q362 1288 385.5 1311.0Q409 1334 427 1334Q451 1334 493 1249Q514 1206 524.0 1156.0Q534 1106 534 1049Q534 978 515.0 907.5Q496 837 459.5 775.0Q423 713 372 666L407 498Q422 500 432.0 501.0Q442 502 447 502Q508 502 556.0 467.5Q604 433 632.5 377.0Q661 321 661 254Q661 177 621.5 115.5Q582 54 503 25Q508 8 532 -117Q538 -147 541.0 -164.5Q544 -182 545.0 -195.0Q546 -208 546 -225Q546 -275 521.5 -314.5Q497 -354 455.5 -376.0Q414 -398 363 -398Q311 -398 271.0 -378.5Q231 -359 208.0 -324.5Q185 -290 185 -245Q185 -197 211.5 -165.0Q238 -133 287 -133Q329 -133 355.5 -163.5Q382 -194 382 -236Q382 -272 357.0 -299.0Q332 -326 292 -326H282Q308 -365 364 -365Q433 -365 472.0 -320.0Q511 -275 511 -205Q511 -188 507.0 -159.5Q503 -131 493 -91Q483 -51 477.5 -25.0Q472 1 470 12Q436 2 390 2Q304 2 222 52Q142 102 96.0 184.0Q50 266 50 361Q50 451 91 530Q132 609 192.5 675.0Q253 741 314 801ZM341 826Q364 838 390.0 870.5Q416 903 440.0 945.0Q464 987 479.0 1029.5Q494 1072 494 1106Q494 1142 483.0 1163.0Q472 1184 445 1184Q421 1184 398.5 1162.0Q376 1140 358.5 1103.5Q341 1067 331.0 1022.0Q321 977 321 930Q321 898 327.5 872.0Q334 846 341 826ZM398 379Q371 373 347.0 353.5Q323 334 308.5 306.5Q294 279 294 248Q294 223 307.0 196.5Q320 170 339 154Q352 142 365 136Q380 129 380 123Q380 120 370 117Q332 126 301.5 151.0Q271 176 253.5 211.5Q236 247 236 287Q236 330 253.5 370.0Q271 410 302.5 442.0Q334 474 374 490L345 641Q229 547 174.5 456.5Q120 366 120 277Q120 212 154.0 156.0Q188 100 247.0 65.5Q306 31 380 31Q400 31 420.5 35.0Q441 39 464 45ZM495 55Q593 97 593 227Q593 270 571.0 305.5Q549 341 512.0 362.0Q475 383 429 383Z", FCLEF="M50 123Q216 231 288 301Q336 348 373.0 408.5Q410 469 431.5 536.0Q453 603 453 669Q453 728 435.0 773.5Q417 819 383.0 845.0Q349 871 302 871Q284 871 264.5 867.0Q245 863 224 855Q181 839 158.0 813.5Q135 788 135 765Q135 756 143.0 752.0Q151 748 158 748Q168 748 183 752Q190 754 196.5 755.0Q203 756 210 756Q248 756 272.0 733.5Q296 711 296 674Q296 638 266.0 612.0Q236 586 195 586Q146 586 111.0 617.0Q76 648 76 697Q76 756 109.0 802.0Q142 848 198.5 874.0Q255 900 324 900Q400 900 460.0 867.0Q520 834 555.5 776.5Q591 719 591 646Q591 551 538 464Q511 419 476.5 379.0Q442 339 389.0 297.5Q336 256 256.0 208.0Q176 160 57 101ZM687 809Q710 809 726.0 793.0Q742 777 742 754Q742 731 726.0 715.5Q710 700 687 700Q664 700 648.0 715.5Q632 731 632 754Q632 777 648.0 793.0Q664 809 687 809ZM687 589Q710 589 726.0 573.0Q742 557 742 534Q742 511 726.0 495.5Q710 480 687 480Q664 480 648.0 495.5Q632 511 632 534Q632 557 648.0 573.0Q664 589 687 589Z";
 
 /* ---------- Règles (reprises de l'appli Mac « À première vue » v0.6) ---------- */
-const TOTAL=150, GOAL=100, DURATION=180, LEVELS=10;
+const TOTAL=150, GOAL=100, DURATION=180, LEVELS=5;
+// Bonus de points : chaque niveau vaut 25 % de plus que le précédent (×1 ; ×1,25 ; ×1,56 ; ×1,95 ; ×2,44)
+const MULT=n=>Math.pow(1.25,n-1);
+const multTxt=n=>"×"+MULT(n).toFixed(2).replace(/0$/,"").replace(/\.0$/,"").replace(".",",");
+const pointsOf=(score,n)=>Math.round(Math.max(0,score)*MULT(n));
 const NAMES=["Do","Ré","Mi","Fa","Sol","La","Si"], OFF=[0,2,4,5,7,9,11];
 const PC=["Do","Do♯","Ré","Ré♯","Mi","Fa","Fa♯","Sol","Sol♯","La","La♯","Si"];
 // Un « degré » : Do4 (do central) = 28 ; octave = degré / 7.
@@ -239,7 +250,11 @@ function wonFor(c){
 }
 let unlocked={sol:unlockedFor("sol"),fa:unlockedFor("fa")};
 let won={sol:wonFor("sol"),fa:wonFor("fa")};
-let clef=prefs.clef, level=unlocked[clef];
+let clef=prefs.clef, level=Math.min(LEVELS,unlocked[clef]);
+// Total cumulé des points bonifiés (initialisé depuis l'historique la première fois)
+let totalPts=store.get("apv-points",null);
+if(totalPts===null){totalPts=history.reduce((t,h)=>t+(h.points??pointsOf(h.score,h.niveau)),0);store.set("apv-points",totalPts)}
+const fmtN=n=>n.toLocaleString("fr-FR");
 
 /* ---------- État de séance ---------- */
 let S=null;           // séance en cours ou terminée
@@ -519,6 +534,7 @@ addEventListener("pagehide",()=>stopMic());
 function press(step,midi,el,fromMic=false){
   if(!fromMic){play(midi);if(prefs.sound)micIgnoreUntil=performance.now()+1250}
   if(!S||!S.running){clearMarks();el.classList.add(step!==null?"hit-ok":"hit-ko");setTimeout(()=>el.classList.remove("hit-ok","hit-ko"),180);return}
+  if(S.deadline===null) S.deadline=Date.now()+DURATION*1000; // le chrono démarre à la première note jouée
   if(Date.now()>=S.deadline){finish();return}
   clearMarks();
   const n=S.notes[S.index];
@@ -542,13 +558,13 @@ let wakeLock=null;
 function start(){
   const prev=history.filter(h=>h.clef===clef&&h.niveau===level&&!h.abandon).map(h=>h.score);
   S={running:true,finished:false,level,clef,notes:generate(level,clef,TOTAL),index:0,score:0,errors:0,notePenalized:false,streak:0,best:0,
-     deadline:Date.now()+DURATION*1000,record:prev.length?Math.max(...prev):null};
-  clearMarks(); fb("idle","Joue la note surlignée, à la bonne octave.");
+     deadline:null,record:prev.length?Math.max(...prev):null};
+  clearMarks(); fb("idle","Le chrono démarre à ta première note. Joue la note surlignée, à la bonne octave.");
   try{navigator.wakeLock&&navigator.wakeLock.request("screen").then(l=>wakeLock=l).catch(()=>{})}catch(e){}
   clearInterval(timer); timer=setInterval(tick,200);
   render(); window.scrollTo({top:0});
 }
-function tick(){if(!S||!S.running)return;if(Date.now()>=S.deadline){finish();return}renderStats()}
+function tick(){if(!S||!S.running)return;if(S.deadline!==null&&Date.now()>=S.deadline){finish();return}renderStats()}
 function finish(o={}){
   if(!S||!S.running) return;
   clearInterval(timer); try{wakeLock&&wakeLock.release()}catch(e){} wakeLock=null;
@@ -557,7 +573,8 @@ function finish(o={}){
   if(S.passed){const nx=Math.max(unlocked[S.clef],Math.min(LEVELS,S.level+1));unlocked[S.clef]=nx;store.set("apv-niveau-"+S.clef,nx);won[S.clef].add(S.level)}
   fb(S.passed?"ok":"idle",S.passed?(S.level<LEVELS?`Bravo ! ${S.score} points : niveau ${S.level} réussi.`:"Bravo ! Objectif atteint au dernier niveau.")
      :S.unreachable?"Objectif devenu inaccessible : réessaie !":S.abandon?"Séance interrompue.":"Séance terminée. Objectif : 100 points.");
-  history.push({date:Date.now()/1000,clef:S.clef,niveau:S.level,score:S.score,notes:S.index,erreurs:S.errors,abandon:S.abandon,
+  S.points=pointsOf(S.score,S.level); totalPts+=S.points; store.set("apv-points",totalPts);
+  history.push({date:Date.now()/1000,clef:S.clef,niveau:S.level,score:S.score,points:S.points,notes:S.index,erreurs:S.errors,abandon:S.abandon,
     motif:S.unreachable?"objectif-inaccessible":S.abandon?"abandon":"terminee","meilleure-serie":S.best,etoiles:S.passed?stars(S.score):0});
   history=history.slice(-200); store.set("apv-historique",history);
   clearMarks(); render();
@@ -566,14 +583,14 @@ function finish(o={}){
 /* ---------- Affichage ---------- */
 function renderStats(){
   const sc=S?S.score:0, idx=S?S.index:0;
-  const rem=S?(S.running?Math.max(0,Math.ceil((S.deadline-Date.now())/1000)):S.finished?Math.max(0,Math.ceil((S.deadline-Date.now())/1000)):DURATION):DURATION;
+  const rem=S&&S.deadline!==null?Math.max(0,Math.ceil((S.deadline-Date.now())/1000)):DURATION;
   $("sScore").textContent=sc;
   $("sTime").textContent=`${Math.floor(rem/60)}:${String(rem%60).padStart(2,"0")}`;
   $("sTime").classList.toggle("low",!!(S&&S.running&&rem<=20));
   $("sNotes").textContent=`${Math.min(idx,TOTAL)}/${TOTAL}`;
   $("sStreak").textContent=S?S.streak:0;
   $("bar").style.width=(idx/TOTAL*100)+"%";
-  const elapsed=S?Math.max(0,Math.min(DURATION,DURATION-(S.deadline-Date.now())/1000)):0;
+  const elapsed=S&&S.deadline!==null?Math.max(0,Math.min(DURATION,DURATION-(S.deadline-Date.now())/1000)):0;
   const lead=idx*DURATION/TOTAL-elapsed;
   const ahead=lead>=0, delta=Math.round(Math.abs(lead));
   const paceText=delta===0?"Dans le rythme":`${ahead?"Avance":"Retard"} : ${delta} s`;
@@ -584,6 +601,7 @@ function renderStats(){
   $("paceMeter").setAttribute("aria-valuenow",Math.min(idx,TOTAL));
   $("paceMeter").setAttribute("aria-valuetext",`${idx} notes sur ${TOTAL}. ${paceText}`);
 }
+const nWon=()=>[...won[clef]].filter(n=>n<=LEVELS).length;
 function renderSetup(){
   document.querySelectorAll("[data-clef]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.clef===clef));
   const L=$("levels"); L.innerHTML="";
@@ -596,8 +614,9 @@ function renderSetup(){
     L.appendChild(b);
   }
   const r=range(clef,level);
-  $("lvinfo").innerHTML=`<b>Niveau ${level} · ${TITLES[level-1]}</b><br><span class="muted">${level>=8?"Les deux clés, ":""}${level<8?label(r[0])+" → "+label(r[1]):""}${level>=8?"notes jusqu'à trois lignes supplémentaires":""} · ${won[clef].has(level)?"réussi ✓":"pas encore réussi"} · ${won[clef].size} niveau${won[clef].size>1?"x":""} réussi${won[clef].size>1?"s":""} sur ${LEVELS}</span>`;
+  $("lvinfo").innerHTML=`<b>Niveau ${level} · ${TITLES[level-1]}</b><br><span class="muted">${level>=8?"Les deux clés, ":""}${level<8?label(r[0])+" → "+label(r[1]):""}${level>=8?"notes jusqu'à trois lignes supplémentaires":""} · ${won[clef].has(level)?"réussi ✓":"pas encore réussi"} · ${nWon()} niveau${nWon()>1?"x":""} réussi${nWon()>1?"s":""} sur ${LEVELS}<br>Bonus de points : <b>${multTxt(level)}</b></span>`;
   $("start").textContent=S&&S.finished?"Nouvelle séance":"Commencer";
+  $("status").innerHTML=`<b>${fmtN(totalPts)}</b> points<br>150 notes · 3 min`;
 }
 function renderResult(){
   const R=$("result");
@@ -605,6 +624,7 @@ function renderResult(){
   R.hidden=false;
   let h=`<div class="row"><div class="big">${S.score} points</div>${S.passed?`<div class="stars">${"★".repeat(stars(S.score))}</div>`:""}</div>`;
   h+=`<p class="muted">${S.index} notes trouvées − ${S.errors} pénalités = ${S.score} points · meilleure série : ${S.best}</p>`;
+  h+=`<p class="okt" style="margin:0">+${fmtN(S.points)} points gagnés (${Math.max(0,S.score)} ${multTxt(S.level)} au niveau ${S.level}) · total ${fmtN(totalPts)}</p>`;
   if(S.record!==null&&S.score>S.record&&!S.abandon) h+=`<p class="okt" style="margin:0">Nouveau record du niveau ! (ancien : ${S.record})</p>`;
   if(S.unreachable) h+=`<p class="muted">Séance écourtée : même sans autre erreur, les 100 points n'étaient plus accessibles.</p>`;
   if(!S.passed&&S.score<GOAL&&!S.abandon) h+=`<p class="muted">Il manque ${GOAL-S.score} point${GOAL-S.score>1?"s":""} pour réussir ce niveau.</p>`;
@@ -621,6 +641,7 @@ function renderHistory(){
   const badges=[["Première réussite",wins.length>0],["Réussite en clé de fa",wins.some(h=>h.clef==="fa")],["Sans faute · 150 notes",history.some(h=>!h.abandon&&h.notes===150&&h.erreurs===0)]];
   const fmt=new Intl.DateTimeFormat("fr-FR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
   let h=`<div class="row"><h2>Tes résultats · ${CLEFS[clef].name}</h2>${best!==null?`<span class="okt">Meilleur : ${best}/150</span>`:""}</div>`;
+  h+=`<p class="muted">Total de points gagnés : <b>${fmtN(totalPts)}</b></p>`;
   if(lvRec.length) h+=`<p class="muted">Record du niveau ${level} : <b>${Math.max(...lvRec)} points</b></p>`;
   h+=`<div class="chips">${badges.map(([t,on])=>`<span class="chip${on?" on":""}">${on?"★":"☆"} ${t}</span>`).join("")}</div>`;
   const recent=all.slice(-5).reverse();
@@ -628,7 +649,7 @@ function renderHistory(){
   else{
     h+=`<div class="hist">`+recent.map(r=>{
       const st=r.abandon?"Interrompue":r.motif==="objectif-inaccessible"?"Objectif inaccessible":r.score>=GOAL?"Réussie "+"★".repeat(stars(r.score)):"À poursuivre";
-      return `<div><div class="t">Niveau ${r.niveau} · ${r.score} points<em class="${!r.abandon&&r.score>=GOAL?"win":""}">${st}</em></div><small>${r.notes} trouvées − ${r.erreurs} pénalités · ${fmt.format(new Date(r.date*1000))}</small></div>`}).join("")+`</div>`;
+      return `<div><div class="t">Niveau ${r.niveau} · ${r.score} points<em class="${!r.abandon&&r.score>=GOAL?"win":""}">${st}</em></div><small>${r.notes} trouvées − ${r.erreurs} pénalités · +${fmtN(r.points??pointsOf(r.score,r.niveau))} pts · ${fmt.format(new Date(r.date*1000))}</small></div>`}).join("")+`</div>`;
   }
   h+=`<p class="muted">Les 200 dernières séances restent sur cet appareil (rien n'est envoyé).</p>`;
   $("history").innerHTML=h;
@@ -637,6 +658,7 @@ function render(){
   const run=!!(S&&S.running);
   const was=document.body.classList.contains("playing"); document.body.classList.toggle("playing",run);
   if(was!==run) buildKeys();
+  const mb=document.querySelector(".micbar"); if(run) $("abandon").before(mb); else $("history").before(mb);
   $("setup").hidden=run; $("history").hidden=run; $("abandon").hidden=!run; $("status").hidden=run;
   if(run){$("result").hidden=true}else{renderSetup();renderResult();renderHistory()}
   renderStats(); renderStaff();
@@ -647,7 +669,7 @@ function chooseLevel(n){
 }
 
 /* ---------- Événements ---------- */
-document.querySelectorAll("[data-clef]").forEach(b=>b.onclick=()=>{clef=b.dataset.clef;prefs.clef=clef;store.set("apv-prefs",prefs);chooseLevel(unlocked[clef])});
+document.querySelectorAll("[data-clef]").forEach(b=>b.onclick=()=>{clef=b.dataset.clef;prefs.clef=clef;store.set("apv-prefs",prefs);chooseLevel(Math.min(LEVELS,unlocked[clef]))});
 $("start").onclick=start;
 $("abandon").onclick=()=>finish({abandon:true});
 $("optSound").checked=prefs.sound;
