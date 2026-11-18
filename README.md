@@ -17,15 +17,15 @@ Cinq niveaux, dont la tessiture s'élargit : en clé de sol de Do4–Sol4 jusqu'
 
 ### Partitions bonus
 
-Chaque niveau réussi débloque une **partition bonus** : une vraie chanson du domaine public, écrite uniquement avec les notes du niveau (mêmes touches que l'exercice), avec ses durées, ses mesures et ses ligatures. Pas de chrono ; à la fin, l'appli rejoue la mélodie. Points : score × bonus du niveau, plus 50 points (× bonus) si la partition est jouée sans faute.
+Chaque niveau offre **trois partitions bonus**, débloquées par ton meilleur score sur ce niveau : **100**, **120** puis **135 points**. Ce sont de vraies chansons du domaine public, écrites uniquement avec les notes du niveau (mêmes touches que l'exercice), avec leurs durées, leurs mesures et leurs ligatures. Pas de chrono ; à la fin, l'appli rejoue la mélodie. Points : score × bonus du niveau, plus 50 points (× bonus) si la partition est jouée sans faute.
 
 | Niveau | Clé de sol | Clé de fa |
 |---|---|---|
-| 1 | Ode à la joie (Beethoven) | Au clair de la lune |
-| 2 | Ah ! vous dirai-je, maman | Ode à la joie |
-| 3 | Frère Jacques | Frère Jacques |
-| 4 | Joyeux anniversaire | Ah ! vous dirai-je, maman |
-| 5 | Douce nuit (Gruber) | Joyeux anniversaire |
+| 1 | Ode à la joie · Vive le vent (refrain) · Marie avait un petit agneau | Au clair de la lune · Hot Cross Buns · Marie avait un petit agneau (mode de mi) |
+| 2 | Ah ! vous dirai-je, maman · Au clair de la lune (complet) · London Bridge | Ode à la joie · Marie avait un petit agneau · Vive le vent (refrain) |
+| 3 | Frère Jacques · Ode à la joie (complète) · Old MacDonald | Frère Jacques · Au clair de la lune (complet) · London Bridge |
+| 4 | Joyeux anniversaire · Frère Jacques (aigu) · Au clair de la lune (aigu) | Ah ! vous dirai-je, maman · Old MacDonald · Ode à la joie (complète) |
+| 5 | Douce nuit · Menuet (Petzold) · Drunken Sailor | Joyeux anniversaire · Menuet (Petzold) · Drunken Sailor |
 
 ## Clavier
 

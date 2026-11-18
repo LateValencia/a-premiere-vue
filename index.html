@@ -146,6 +146,9 @@ body.bonus .pace{display:none!important}
 .btns{display:flex;gap:8px;flex-wrap:wrap}
 .btns .go{flex:1}
 .go.song{background:var(--ok);color:var(--paper)}
+.songs{display:flex;flex-direction:column;gap:6px}
+.songs .muted{margin:2px 0 0}
+.go.locked{background:transparent;color:var(--ink-soft);border:1px dashed var(--line);font-weight:500;font-size:14px;padding:9px;cursor:default}
 button:focus-visible,input:focus-visible{outline:2px solid var(--felt);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -167,7 +170,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--felt);outline-o
     <div class="levels" id="levels" role="group" aria-label="Niveau"></div>
     <p class="lvinfo" id="lvinfo"></p>
     <button class="go" id="start">Commencer</button>
-    <button class="go song" id="bonusBtn" hidden></button>
+    <div class="songs" id="songs"></div>
     <p class="muted">+1 par note juste à la bonne octave · −1 maximum par note à trouver · 100 points valident le niveau (il passe en vert). Chaque niveau rapporte 25 % de points en plus, même sans le réussir. Le chrono démarre à ta première note.</p>
   </section>
 
@@ -339,23 +342,59 @@ const LETTERS=["C","D","E","F","G","A","B"];
    Notation : Note+octave+durée (e croche, q noire, q. noire pointée, h blanche, h. blanche pointée, w ronde), « | » = barre de mesure. */
 const DUR={e:.5,q:1,"q.":1.5,h:2,"h.":3,w:4};
 const shiftOct=(m,k)=>m.replace(/([A-G])(\d)/g,(_,l,o)=>l+(+o+k));
+const TRAD="Chanson traditionnelle";
+const M={
+  ode:"E4q E4q F4q G4q|G4q F4q E4q D4q|C4q C4q D4q E4q|E4q. D4e D4h|E4q E4q F4q G4q|G4q F4q E4q D4q|C4q C4q D4q E4q|D4q. C4e C4h",
+  odeG:"B4q B4q C5q D5q|D5q C5q B4q A4q|G4q G4q A4q B4q|B4q. A4e A4h|B4q B4q C5q D5q|D5q C5q B4q A4q|G4q G4q A4q B4q|A4q. G4e G4h|A4q A4q B4q G4q|A4q B4e C5e B4q G4q|A4q B4e C5e B4q A4q|G4q A4q D4h|B4q B4q C5q D5q|D5q C5q B4q A4q|G4q G4q A4q B4q|A4q. G4e G4h",
+  odeC3:"E3q E3q F3q G3q|G3q F3q E3q D3q|C3q C3q D3q E3q|E3q. D3e D3h|E3q E3q F3q G3q|G3q F3q E3q D3q|C3q C3q D3q E3q|D3q. C3e C3h|D3q D3q E3q C3q|D3q E3e F3e E3q C3q|D3q E3e F3e E3q D3q|C3q D3q G2h|E3q E3q F3q G3q|G3q F3q E3q D3q|C3q C3q D3q E3q|D3q. C3e C3h",
+  twinkle:"C4q C4q G4q G4q|A4q A4q G4h|F4q F4q E4q E4q|D4q D4q C4h|G4q G4q F4q F4q|E4q E4q D4h|G4q G4q F4q F4q|E4q E4q D4h|C4q C4q G4q G4q|A4q A4q G4h|F4q F4q E4q E4q|D4q D4q C4h",
+  jacquesG:"G4q A4q B4q G4q|G4q A4q B4q G4q|B4q C5q D5h|B4q C5q D5h|D5e E5e D5e C5e B4q G4q|D5e E5e D5e C5e B4q G4q|G4q D4q G4h|G4q D4q G4h",
+  jacquesC:"C3q D3q E3q C3q|C3q D3q E3q C3q|E3q F3q G3h|E3q F3q G3h|G3e A3e G3e F3e E3q C3q|G3e A3e G3e F3e E3q C3q|C3q G2q C3h|C3q G2q C3h",
+  birthday:"G4e G4e|A4q G4q C5q|B4h G4e G4e|A4q G4q D5q|C5h G4e G4e|G5q E5q C5q|B4q A4q F5e F5e|E5q C5q D5q|C5h.",
+  nuit:"G4q. A4e G4q|E4h.|G4q. A4e G4q|E4h.|D5h D5q|B4h.|C5h C5q|G4h.|A4h A4q|C5q. B4e A4q|G4q. A4e G4q|E4h.|A4h A4q|C5q. B4e A4q|G4q. A4e G4q|E4h.|D5h D5q|F5q. D5e B4q|C5h.|E5h.|C5q. G4e E4q|G4q. F4e D4q|C4h.",
+  vent:"E4q E4q E4h|E4q E4q E4h|E4q G4q C4q. D4e|E4w|F4q F4q F4q. F4e|F4q E4q E4q E4e E4e|E4q D4q D4q E4q|D4h G4h|E4q E4q E4h|E4q E4q E4h|E4q G4q C4q. D4e|E4w|F4q F4q F4q. F4e|F4q E4q E4q E4e E4e|G4q G4q F4q D4q|C4w",
+  ventG:"B2q B2q B2h|B2q B2q B2h|B2q D3q G2q. A2e|B2w|C3q C3q C3q. C3e|C3q B2q B2q B2e B2e|B2q A2q A2q B2q|A2h D3h|B2q B2q B2h|B2q B2q B2h|B2q D3q G2q. A2e|B2w|C3q C3q C3q. C3e|C3q B2q B2q B2e B2e|D3q D3q C3q A2q|G2w",
+  mary:"E4q D4q C4q D4q|E4q E4q E4h|D4q D4q D4h|E4q G4q G4h|E4q D4q C4q D4q|E4q E4q E4q E4q|D4q D4q E4q D4q|C4w",
+  maryG:"B2q A2q G2q A2q|B2q B2q B2h|A2q A2q A2h|B2q D3q D3h|B2q A2q G2q A2q|B2q B2q B2q B2q|A2q A2q B2q A2q|G2w",
+  london:"G4q. A4e G4q F4q|E4q F4q G4h|D4q E4q F4h|E4q F4q G4h|G4q. A4e G4q F4q|E4q F4q G4h|D4h G4h|E4h C4h",
+  clairF:"F4q F4q F4q G4q|A4h G4h|F4q A4q G4q G4q|F4w|F4q F4q F4q G4q|A4h G4h|F4q A4q G4q G4q|F4w|G4q G4q G4q G4q|D4h D4h|G4q F4q E4q D4q|C4w|F4q F4q F4q G4q|A4h G4h|F4q A4q G4q G4q|F4w",
+  clairC3:"C3q C3q C3q D3q|E3h D3h|C3q E3q D3q D3q|C3w|C3q C3q C3q D3q|E3h D3h|C3q E3q D3q D3q|C3w|D3q D3q D3q D3q|A2h A2h|D3q C3q B2q A2q|G2w|C3q C3q C3q D3q|E3h D3h|C3q E3q D3q D3q|C3w",
+  clairG2:"G2q G2q G2q A2q|B2h A2h|G2q B2q A2q A2q|G2w|G2q G2q G2q A2q|B2h A2h|G2q B2q A2q A2q|G2w",
+  macdo:"G4q G4q G4q D4q|E4q E4q D4h|B4q B4q A4q A4q|G4h. D4q|G4q G4q G4q D4q|E4q E4q D4h|B4q B4q A4q A4q|G4w",
+  macdoC3:"C3q C3q C3q G2q|A2q A2q G2h|E3q E3q D3q D3q|C3h. G2q|C3q C3q C3q G2q|A2q A2q G2h|E3q E3q D3q D3q|C3w",
+  menuet:"G4q C4e D4e E4e F4e|G4q C4q C4q|A4q F4e G4e A4e B4e|C5q C4q C4q|F4q G4e F4e E4e D4e|E4q F4e E4e D4e C4e|B3q C4e D4e E4e C4e|D4h.|G4q C4e D4e E4e F4e|G4q C4q C4q|A4q F4e G4e A4e B4e|C5q C4q C4q|F4q G4e F4e E4e D4e|E4q F4e E4e D4e C4e|D4q E4e D4e C4e B3e|C4h.",
+  sailor:"A4q A4e A4e A4q A4e A4e|A4q D4q F4q A4q|G4q G4e G4e G4q G4e G4e|G4q C4q E4q G4q|A4q A4e A4e A4q A4e A4e|A4q B4q C5q D5q|C5q A4q G4q E4q|D4h D4h",
+  buns:"B2q A2q G2h|B2q A2q G2h|G2e G2e G2e G2e A2e A2e A2e A2e|B2q A2q G2h",
+  maryMode:"G2q F2q E2q F2q|G2q G2q G2h|F2q F2q F2h|G2q B2q B2h|G2q F2q E2q F2q|G2q G2q G2q G2q|F2q F2q G2q F2q|E2w"
+};
+const S4=(title,by,m,bpm=100)=>({title,by,meter:4,bpm,m}), S3=(title,by,m,bpm=96)=>({title,by,meter:3,bpm,m});
+const T={
+  ode:(m)=>S4("Ode à la joie","Beethoven",m), odeFull:(m)=>S4("Ode à la joie (complète)","Beethoven",m),
+  twinkle:(m)=>S4("Ah ! vous dirai-je, maman","Air traditionnel",m), jacques:(m)=>S4("Frère Jacques",TRAD,m,104),
+  birthday:(m)=>S3("Joyeux anniversaire","Mildred et Patty Hill",m), vent:(m)=>S4("Vive le vent (refrain)","James Lord Pierpont",m,112),
+  mary:(m)=>S4("Marie avait un petit agneau",TRAD,m,108), london:(m)=>S4("London Bridge",TRAD,m,104),
+  clair:(m)=>S4("Au clair de la lune",TRAD,m), macdo:(m)=>S4("Old MacDonald",TRAD,m,108),
+  menuet:(m)=>S3("Menuet en sol (en do)","Christian Petzold",m,100), sailor:(m)=>S4("Drunken Sailor",'Chant de marins',m,112)
+};
+// Trois chansons par niveau : la 1re à 100 points, la 2e à 120, la 3e à 135 (meilleur score du niveau)
+const SONG_AT=[100,120,135];
 const SONGS={sol:{
-  1:{title:"Ode à la joie",by:"Beethoven",meter:4,bpm:100,m:"E4q E4q F4q G4q|G4q F4q E4q D4q|C4q C4q D4q E4q|E4q. D4e D4h|E4q E4q F4q G4q|G4q F4q E4q D4q|C4q C4q D4q E4q|D4q. C4e C4h"},
-  2:{title:"Ah ! vous dirai-je, maman",by:"Air traditionnel",meter:4,bpm:100,m:"C4q C4q G4q G4q|A4q A4q G4h|F4q F4q E4q E4q|D4q D4q C4h|G4q G4q F4q F4q|E4q E4q D4h|G4q G4q F4q F4q|E4q E4q D4h|C4q C4q G4q G4q|A4q A4q G4h|F4q F4q E4q E4q|D4q D4q C4h"},
-  3:{title:"Frère Jacques",by:"Chanson traditionnelle",meter:4,bpm:104,m:"G4q A4q B4q G4q|G4q A4q B4q G4q|B4q C5q D5h|B4q C5q D5h|D5e E5e D5e C5e B4q G4q|D5e E5e D5e C5e B4q G4q|G4q D4q G4h|G4q D4q G4h"},
-  4:{title:"Joyeux anniversaire",by:"Mildred et Patty Hill",meter:3,bpm:96,m:"G4e G4e|A4q G4q C5q|B4h G4e G4e|A4q G4q D5q|C5h G4e G4e|G5q E5q C5q|B4q A4q F5e F5e|E5q C5q D5q|C5h."},
-  5:{title:"Douce nuit",by:"Franz Gruber",meter:3,bpm:84,m:"G4q. A4e G4q|E4h.|G4q. A4e G4q|E4h.|D5h D5q|B4h.|C5h C5q|G4h.|A4h A4q|C5q. B4e A4q|G4q. A4e G4q|E4h.|A4h A4q|C5q. B4e A4q|G4q. A4e G4q|E4h.|D5h D5q|F5q. D5e B4q|C5h.|E5h.|C5q. G4e E4q|G4q. F4e D4q|C4h."}
+  1:[T.ode(M.ode),T.vent(M.vent),T.mary(M.mary)],
+  2:[T.twinkle(M.twinkle),T.clair(M.clairF),T.london(M.london)],
+  3:[T.jacques(M.jacquesG),T.odeFull(M.odeG),T.macdo(M.macdo)],
+  4:[T.birthday(M.birthday),{...T.jacques(shiftOct(M.jacquesC,2)),title:"Frère Jacques (aigu)"},{...T.clair(shiftOct(M.clairF,1)),title:"Au clair de la lune (aigu)"}],
+  5:[S3("Douce nuit","Franz Gruber",M.nuit,84),T.menuet(M.menuet),T.sailor(M.sailor)]
 },fa:{
-  1:{title:"Au clair de la lune",by:"Chanson traditionnelle",meter:4,bpm:100,m:"G2q G2q G2q A2q|B2h A2h|G2q B2q A2q A2q|G2w|G2q G2q G2q A2q|B2h A2h|G2q B2q A2q A2q|G2w"},
-  2:{title:"Ode à la joie",by:"Beethoven",meter:4,bpm:100,m:"B2q B2q C3q D3q|D3q C3q B2q A2q|G2q G2q A2q B2q|B2q. A2e A2h|B2q B2q C3q D3q|D3q C3q B2q A2q|G2q G2q A2q B2q|A2q. G2e G2h"},
-  3:{title:"Frère Jacques",by:"Chanson traditionnelle",meter:4,bpm:104,m:"C3q D3q E3q C3q|C3q D3q E3q C3q|E3q F3q G3h|E3q F3q G3h|G3e A3e G3e F3e E3q C3q|G3e A3e G3e F3e E3q C3q|C3q G2q C3h|C3q G2q C3h"}
+  1:[T.clair(M.clairG2),S4("Hot Cross Buns",TRAD,M.buns,108),{...T.mary(M.maryMode),title:"Marie avait un petit agneau (mode de mi)"}],
+  2:[T.ode(shiftOct(M.odeG,-2).split("|").slice(0,8).join("|")),T.mary(M.maryG),T.vent(M.ventG)],
+  3:[T.jacques(M.jacquesC),T.clair(M.clairC3),T.london(shiftOct(M.london,-1))],
+  4:[T.twinkle(shiftOct(M.twinkle,-1)),T.macdo(M.macdoC3),T.odeFull(M.odeC3)],
+  5:[T.birthday(shiftOct(M.birthday,-2)),T.menuet(shiftOct(M.menuet,-1)),T.sailor(shiftOct(M.sailor,-1))]
 }};
-SONGS.fa[4]={...SONGS.sol[2],m:shiftOct(SONGS.sol[2].m,-1)};
-SONGS.fa[5]={...SONGS.sol[4],m:shiftOct(SONGS.sol[4].m,-2)};
 // Espacement des notes : pas proportionnel à la durée, sinon les croches se chevauchent
 const SPACE=d=>Math.max(.9,Math.sqrt(d)*1.2);
-function songFor(c,n){
-  const sg=SONGS[c][n]; if(sg.notes) return sg;
+function songFor(c,n,k=0){
+  const sg=SONGS[c][n][k]; if(sg.notes) return sg;
   sg.clef=c; sg.level=n; sg.notes=[]; sg.bars=[];
   sg.m.split("|").forEach(bs=>{
     const b={n0:sg.notes.length,beats:0,w:.45};
@@ -686,11 +725,15 @@ function start(){
   render(); window.scrollTo({top:0});
 }
 let bonusRec=store.get("apv-bonus",{}), pbTimer=0;
+const bestOf=(c,n)=>Math.max(-1e9,...history.filter(h=>h.clef===c&&h.niveau===n&&!h.abandon).map(h=>h.score));
+// Nombre de chansons débloquées pour un niveau (au moins une si le niveau est marqué réussi)
+const songsOpen=(c,n)=>Math.max(won[c].has(n)?1:0,SONG_AT.filter(t=>bestOf(c,n)>=t).length);
+const recKey=(c,n,k)=>c+"-"+n+(k?"-"+k:"");
 const CLEAN_BONUS=50;
-function startBonus(){
+function startBonus(k=0){
   clearTimeout(pbTimer);
-  const sg=songFor(clef,level);
-  S={bonus:true,running:true,finished:false,level,clef,song:sg,notes:sg.notes,index:0,score:0,errors:0,notePenalized:false,streak:0,best:0,
+  const sg=songFor(clef,level,k);
+  S={bonus:true,songIdx:k,running:true,finished:false,level,clef,song:sg,notes:sg.notes,index:0,score:0,errors:0,notePenalized:false,streak:0,best:0,
      startedAt:null,endedAt:null,deadline:null,playIdx:null};
   clearMarks(); fb("idle",`♪ ${sg.title} · pas de chrono : joue chaque note surlignée.`);
   try{navigator.wakeLock&&navigator.wakeLock.request("screen").then(l=>wakeLock=l).catch(()=>{})}catch(e){}
@@ -705,7 +748,7 @@ function finishBonus(o={}){
   S.points=S.abandon?0:pointsOf(Math.max(0,S.score)+(S.clean?CLEAN_BONUS:0),S.level);
   totalPts+=S.points; store.set("apv-points",totalPts);
   if(!S.abandon){
-    const k=S.clef+"-"+S.level, r=bonusRec[k]||{fois:0,sansFaute:false,meilleur:-1e9};
+    const k=recKey(S.clef,S.level,S.songIdx), r=bonusRec[k]||{fois:0,sansFaute:false,meilleur:-1e9};
     bonusRec[k]={fois:r.fois+1,sansFaute:r.sansFaute||S.clean,meilleur:Math.max(r.meilleur,S.score)};
     store.set("apv-bonus",bonusRec);
   }
@@ -733,6 +776,7 @@ function finish(o={}){
   clearInterval(timer); try{wakeLock&&wakeLock.release()}catch(e){} wakeLock=null;
   S.running=false;S.finished=true;S.abandon=!!o.abandon;S.unreachable=!!o.unreachable;
   S.passed=!S.abandon&&!S.unreachable&&S.score>=GOAL;
+  S.songsBefore=songsOpen(S.clef,S.level);
   if(S.passed){const nx=Math.max(unlocked[S.clef],Math.min(LEVELS,S.level+1));unlocked[S.clef]=nx;store.set("apv-niveau-"+S.clef,nx);won[S.clef].add(S.level)}
   fb(S.passed?"ok":"idle",S.passed?(S.level<LEVELS?`Bravo ! ${S.score} points : niveau ${S.level} réussi.`:"Bravo ! Objectif atteint au dernier niveau.")
      :S.unreachable?"Objectif devenu inaccessible : réessaie !":S.abandon?"Séance interrompue.":"Séance terminée. Objectif : 100 points.");
@@ -787,10 +831,12 @@ function renderSetup(){
   const r=range(clef,level);
   $("lvinfo").innerHTML=`<b>Niveau ${level} · ${TITLES[level-1]}</b><br><span class="muted">${level>=8?"Les deux clés, ":""}${level<8?label(r[0])+" → "+label(r[1]):""}${level>=8?"notes jusqu'à trois lignes supplémentaires":""} · ${won[clef].has(level)?"réussi ✓":"pas encore réussi"} · ${nWon()} niveau${nWon()>1?"x":""} réussi${nWon()>1?"s":""} sur ${LEVELS}<br>Bonus de points : <b>${multTxt(level)}</b></span>`;
   $("start").textContent=S&&S.finished&&!S.bonus?"Nouvelle séance":"Commencer";
-  const sg=SONGS[clef][level], rec=bonusRec[clef+"-"+level], open=won[clef].has(level);
-  $("bonusBtn").hidden=!open||!sg;
-  if(sg) $("bonusBtn").textContent=`♪ Partition bonus : ${sg.title}${rec&&rec.sansFaute?" ✓":""}`;
-  if(sg&&!open) $("lvinfo").insertAdjacentHTML("beforeend",`<br><span class="muted">♪ Réussis ce niveau pour débloquer sa partition bonus (une vraie chanson).</span>`);
+  const open=songsOpen(clef,level), best=bestOf(clef,level);
+  $("songs").innerHTML=`<p class="muted">♪ Partitions bonus · ${open}/3 débloquée${open>1?"s":""}${best>-1e9?` · ton meilleur score ici : ${best}`:""}</p>`+
+    SONGS[clef][level].map((g,k)=>{const rec=bonusRec[recKey(clef,level,k)];
+      return k<open?`<button class="go song" data-song="${k}">♪ ${g.title}${rec&&rec.sansFaute?" ✓":""}</button>`
+                   :`<button class="go locked" disabled>🔒 Chanson ${k+1} · à ${SONG_AT[k]} points</button>`}).join("");
+  $("songs").querySelectorAll("[data-song]").forEach(b=>b.onclick=()=>startBonus(+b.dataset.song));
   $("status").innerHTML=`<b>${fmtN(totalPts)}</b> points<br>150 notes · 3 min`;
 }
 function renderResult(){
@@ -805,7 +851,7 @@ function renderResult(){
     h+=`<div class="btns">${S.abandon?"":`<button class="go alt" id="replaySong">Réécouter la mélodie</button>`}<button class="go song" id="againSong">Rejouer la partition</button></div>`;
     R.innerHTML=h;
     if($("replaySong")) $("replaySong").onclick=playSong;
-    $("againSong").onclick=startBonus;
+    $("againSong").onclick=()=>startBonus(S.songIdx);
     return;
   }
   let h=`<div class="row"><div class="big">${S.score} points</div>${S.passed?`<div class="stars">${"★".repeat(stars(S.score))}</div>`:""}</div>`;
@@ -814,12 +860,14 @@ function renderResult(){
   if(S.record!==null&&S.score>S.record&&!S.abandon) h+=`<p class="okt" style="margin:0">Nouveau record du niveau ! (ancien : ${S.record})</p>`;
   if(S.unreachable) h+=`<p class="muted">Séance écourtée : même sans autre erreur, les 100 points n'étaient plus accessibles.</p>`;
   if(!S.passed&&S.score<GOAL&&!S.abandon) h+=`<p class="muted">Il manque ${GOAL-S.score} point${GOAL-S.score>1?"s":""} pour réussir ce niveau.</p>`;
-  if(S.passed&&SONGS[S.clef][S.level]) h+=`<button class="go song" id="bonusNow">♪ Partition bonus débloquée : ${SONGS[S.clef][S.level].title}</button>`;
+  const nowOpen=songsOpen(S.clef,S.level);
+  for(let k=S.songsBefore;k<nowOpen;k++) h+=`<button class="go song" data-song="${k}">♪ Nouvelle partition débloquée : ${SONGS[S.clef][S.level][k].title}</button>`;
+  if(!S.abandon&&nowOpen<3){const nx=SONG_AT[nowOpen]; h+=`<p class="muted">♪ Prochaine partition bonus à ${nx} points sur ce niveau.</p>`}
   if(S.passed&&S.level<LEVELS) h+=`<button class="go alt" id="nextLevel">Passer au niveau ${S.level+1}</button>`;
   else if(S.passed) h+=`<p class="okt" style="margin:0">Dernier niveau réussi !</p>`;
   R.innerHTML=h;
   const nb=$("nextLevel"); if(nb) nb.onclick=()=>{chooseLevel(S.level+1);start()};
-  const bn=$("bonusNow"); if(bn) bn.onclick=startBonus;
+  R.querySelectorAll("[data-song]").forEach(b=>b.onclick=()=>startBonus(+b.dataset.song));
 }
 function renderHistory(){
   const all=history.filter(h=>h.clef===clef), done=all.filter(h=>!h.abandon);
@@ -859,7 +907,6 @@ function chooseLevel(n){
 /* ---------- Événements ---------- */
 document.querySelectorAll("[data-clef]").forEach(b=>b.onclick=()=>{clef=b.dataset.clef;prefs.clef=clef;store.set("apv-prefs",prefs);chooseLevel(Math.min(LEVELS,unlocked[clef]))});
 $("start").onclick=start;
-$("bonusBtn").onclick=startBonus;
 $("abandon").onclick=()=>finish({abandon:true});
 $("optSound").checked=prefs.sound;
 $("optSound").onchange=e=>{prefs.sound=e.target.checked;store.set("apv-prefs",prefs);if(prefs.sound)buildKeys()};
@@ -867,8 +914,8 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S&&S.runn
 
 chooseLevel(level);
 window.__apv=()=>S; // inspection pour les tests
-window.__apvSongs=()=>["sol","fa"].flatMap(c=>[1,2,3,4,5].map(n=>{const g=songFor(c,n),r=range(c,n);return {c,n,t:g.title,lo:g.lo,hi:g.hi,ok:g.lo>=r[0]&&g.hi<=r[1],bars:g.bars.map(b=>b.beats).join(",")}}));
-window.__apvWin=()=>{won[clef].add(level);render()};
+window.__apvSongs=()=>["sol","fa"].flatMap(c=>[1,2,3,4,5].flatMap(n=>[0,1,2].map(k=>{const g=songFor(c,n,k),r=range(c,n);return {c,n,k,t:g.title,lo:g.lo,hi:g.hi,ok:g.lo>=r[0]&&g.hi<=r[1],bars:g.bars.map(b=>b.beats).join(",")}})));
+window.__apvWin=(sc=100)=>{history.push({date:Date.now()/1000,clef,niveau:level,score:sc,notes:sc,erreurs:0,abandon:false});won[clef].add(level);render()};
 })();
 </script>
 </body>
